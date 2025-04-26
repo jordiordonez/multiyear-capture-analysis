@@ -1,90 +1,110 @@
-# 📈 Projecte Pla de Caça
+# 🏹 Pla de Caça - Simulació i Anàlisi Multianual de Captures
 
-## 📂 Estructura del projecte
+Simulació de captures d'isards en diversos escenaris de caça controlada, generant informes visuals i analítics de les adjudicacions durant múltiples anys.
 
-```plaintext
-/project/
-│
-├── data/                   # Fitxers CSV d'entrada i resultats
-│    ├── sorteig.csv         # Fitxer d'entrada inicial generat
-│    ├── historial_6_anys.csv# Historial de 6 anys generat per simulacions
-│    ├── resultats_any_X.csv # Resultats de cada any
-│
-├── figures/                 # Figures i gràfics generats
-│    ├── escenari_normal/
-│    ├── escenari_colles_6/
-│    ├── escenari_captures_variables_colles_8/
-│    ├── escenari_captures_variables_colles_6/
-│
-├── reports/                 # Informes PDF generats
-│    ├── INFORME_ESCENARI_X.pdf
-│    ├── INFORME_FINAL.pdf
-│
-├── modules/                 # Codi Python modularitzat
-│    ├── generador.py         # Generador de dades inicials
-│    ├── sorteig.py           # Assignació d'isards
-│    ├── simulacio.py         # Simulació multianual
-│    └── analisi.py           # Anàlisi gràfica
-│
-├── main_generador.py         # Crear dades inicials manualment
-├── main_simulacio.py         # Simular una única execució
-├── main_analisi.py           # Anàlisi i gràfics d'una simulació
-├── main_pipeline.py          # Pipeline COMPLET per múltiples escenaris
-│
-├── requirements.txt          # Dependències del projecte
-└── README.md                 # Aquest document
-
+## 📂 Estructura del Projecte
 
 ```
-## 🚀 Com començar
+/pla-de-caca/
+│
+├── data/             # CSVs d'entrada i resultats (buit inicialment)
+├── figures/          # Gràfics generats automàticament
+├── informes/         # Informes PDF generats automàticament
+├── modules/          # Mòduls Python
+│   ├── analisi.py
+│   ├── config_escenaris.py
+│   ├── generador.py
+│   ├── simulacio.py
+│   └── sorteig.py
+│
+├── main_pipeline.py  # Llançar tota la simulació + informes
+├── main_generador.py # Generar dades inicials personalitzades
+├── main_simulacio.py # Simulació simple
+├── main_analisi.py   # Només generar gràfics
+├── main_informes.py  # Combinar PDFs
+│
+├── requirements.txt  # Dependències Python
+├── README.md         # Aquest document
+│
+└── .gitignore        # Excloure carpetes i fitxers no necessaris
 
-### Instal·lació d'entorn
-Assegura't que tens Python 3.8+ instal·lat.
+````
 
-Instal·la totes les dependències amb:
+## 🚀 Com executar el projecte
 
-`pip install -r requirements.txt`
+1. Instal·lació de dependències
+Assegura't de tenir Python 3.8 o superior.
 
-## 📊 Execució Manual
+    `pip install -r requirements.txt`
 
-Generar dades inicials:
+2. Simular Escenaris Complets
+Executa el pipeline complet:
 
-`python3 main_generador.py`
+    `python3 main_pipeline.py`
 
-Simular 6 anys:
 
-`python3 main_simulacio.py`
+    Resultats:
 
-Generar figures i gràfics:
+    * CSVs a data/
+    * Gràfics a figures/NOM_ESCENARI/
+    * Informe PDF a informes/NOM_ESCENARI.pdf
 
-`python3 main_analisi.py`
+## 🧠 Escenaris Definits
 
-## 🛠️ PIPELINE Automàtic de tots els Escenaris
 
-Executa tot el projecte automàticament:
+#### Escenari	Descripció
+* base	Configuració bàsica (colles mínim 8 membres, captures fixes)
+* colles_de_6	Simulació amb colles més petites (mínim 6 membres)
+* captures_variables	Nombre variable de captures entre 60 i 300 per any
+* nous_i_retirats	Incorporació i retirada de caçadors cada any
 
-`python3 main_pipeline.py`
+#### 📊 Què genera el projecte?
 
-Això farà:
+* Heatmap de captures consecutives (per ID, Modalitat A/B)
+* Gràfic de barres apilades de percentatges de captures per any
+* Informe PDF per cada escenari (explicacions + gràfics)
+* Unió de tots els informes en un PDF únic
 
-🔥 Generar dades diferents per cada escenari.
-🏹 Simular 6 anys (captures fixes o variables).
-📊 Crear figures (heatmaps i stacked bar charts).
-📄 Crear informes PDF per cada escenari.
-📑 Combinar tot en un INFORME_FINAL.pdf dins /reports/.
 
-## 📦 Llibreries utilitzades
+## 🔥 Llibreries utilitzades
 
-pandas
-numpy
-matplotlib
-seaborn
-fpdf
+    pandas
+    numpy
+    matplotlib
+    seaborn
+    PyPDF2
+    random
 
-## 🧠 Notes finals
 
-El codi és 100% modular i extensible.
-Suporta escenaris amb variació de captures i variació de mides de colles.
-Gestiona correctament les carpetes i fitxers.
-Organitza figures i informes per escenari.
-Crea un report final únic combinant tots els resultats.
+## 🎯 Objectius assolits
+
+* 🧩 Arquitectura modular (generador, simulador, analitzador, informes)
+* 🔥 Automatització total del pipeline de simulació
+* 📊 Visualització professional de dades
+* 🧠 Gestió dinàmica de caçadors: nous ingressos i retirades
+* 📦 Preprarat per a ser escalat amb nous escenaris o configuracions
+* 📸 Exemples de Gràfics
+
+
+    * Heatmap	
+    * Barres Apilades
+
+
+## 🧠 Reflexió Final
+
+Aquest projecte ha suposat:
+
+* Treballar la gestió de projectes de dades complexos.
+* Aprendre a modularitzar i escalar simulacions realistes.
+* Generar informes automàtics a partir d'anàlisis de dades.
+* Practicar la creació de pipelines de dades end-to-end.
+
+
+## 📎 Repositoris Relacionats
+
+...
+
+
+#### 🌟 Si t'ha agradat aquest projecte, deixa un ⭐ al repositori!
+#### 🔗 També pots connectar amb mi a [LinkedIn](https://www.linkedin.com/in/jordi-ordoñez-814614341/)!
+
