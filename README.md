@@ -107,4 +107,3 @@ Aquest projecte ha suposat:
 
 #### 🌟 Si t'ha agradat aquest projecte, deixa un ⭐ al repositori!
 #### 🔗 També pots connectar amb mi a [LinkedIn](https://www.linkedin.com/in/jordi-ordoñez-814614341/)!
-
