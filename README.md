@@ -1,3 +1,4 @@
+
 # 🏹 Hunting Plan – Multiyear Simulation and Capture Analysis
 
 Simulation of isard captures across various controlled hunting scenarios, generating visual and analytical reports of allocations over multiple years.
@@ -13,19 +14,19 @@ Simulation of isard captures across various controlled hunting scenarios, genera
 │
 ├── data/             # Input CSVs and results (initially empty)
 ├── figures/          # Automatically generated graphs
-├── reports/          # Automatically generated PDF reports
+├── reports/          # Automatically generated Markdown reports
 ├── modules/          # Python modules
-│   ├── analysis.py
-│   ├── scenario_config.py
-│   ├── generator.py
-│   ├── simulation.py
-│   └── lottery.py
+│   ├── analisi.py
+│   ├── config_escenaris.py
+│   ├── generador.py
+│   ├── simulacio.py
+│   └── sorteig.py
 │
 ├── main_pipeline.py  # Run the complete simulation + reports
 ├── main_generator.py # Generate custom initial data
 ├── main_simulation.py # Simple simulation
 ├── main_analysis.py  # Generate graphs only
-├── main_reports.py   # Merge PDFs
+├── main_reports.py   # Merge Markdown reports
 │
 ├── requirements.txt  # Python dependencies
 ├── README.md         # This document
@@ -52,23 +53,24 @@ python3 main_pipeline.py
 ### Outputs:
 - CSV files saved in `data/`
 - Graphs saved in `figures/SCENARIO_NAME/`
-- PDF reports saved in `reports/SCENARIO_NAME.pdf`
+- Markdown reports saved individually in `reports/`
+- Final combined Markdown report created at `reports/final_report.md`
 
 ## 🧐 Defined Scenarios
 
 | Scenario | Description |
 |:---------|:------------|
-| `base` | Basic configuration (groups of at least 8 members, fixed captures) |
-| `groups_of_6` | Simulation with smaller groups (minimum 6 members) |
-| `variable_captures` | Variable number of captures between 60 and 300 per year |
-| `new_and_retired` | Hunters joining and leaving each year |
+| `base` | Minimum 8 per colla, fixed captures, no entrants ni sortints |
+| `colles_de_6` | Minimum 6 per colla, captures fixes |
+| `captures_variables` | Variable number of captures between 60 and 300 per year |
+| `nous_i_retirats` | Hunters joining and leaving (between 10 and 100 per year) |
 
 ## 📊 What This Project Generates
 
 - Heatmap of consecutive captures (by ID, Mode A/B)
 - Stacked bar charts showing capture percentages by year
-- Detailed PDF report for each scenario
-- Merged final PDF report combining all scenarios
+- Detailed Markdown report for each scenario
+- Final combined Markdown report for easier comparison
 
 ## 🔥 Libraries Used
 
@@ -78,6 +80,7 @@ python3 main_pipeline.py
 - `seaborn`
 - `PyPDF2`
 - `random`
+- `pandoc` (optional, if you later want to convert Markdown to PDF)
 
 ## 🎯 Achieved Goals
 
@@ -99,7 +102,7 @@ This project allowed me to:
 
 ## 📌 Related Repositories
 
-...
+(coming soon...)
 
 ---
 
