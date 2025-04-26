@@ -32,5 +32,13 @@ escenaris = [
         "captures_per_any": [150] * 6,
         "new_hunters_per_year": (10, 100),  # Rang aleatori cada any
         "retired_hunters_per_year": (10, 100)
+    },
+    {
+        "nom": "captures_realment_variables",
+        "min_colla": 8,
+        "max_colla": 20,
+        "captures_per_any": [60, 300],
+        "new_hunters_per_year": 0,
+        "retired_hunters_per_year": 0
     }
 ]

@@ -1,109 +1,107 @@
-# 🏹 Pla de Caça - Simulació i Anàlisi Multianual de Captures
+# 🏹 Hunting Plan – Multiyear Simulation and Capture Analysis
 
-Simulació de captures d'isards en diversos escenaris de caça controlada, generant informes visuals i analítics de les adjudicacions durant múltiples anys.
+Simulation of isard captures across various controlled hunting scenarios, generating visual and analytical reports of allocations over multiple years.
 
-## 📂 Estructura del Projecte
+![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
+## 📂 Project Structure
 
 ```
-/pla-de-caca/
+/hunting-plan/
 │
-├── data/             # CSVs d'entrada i resultats (buit inicialment)
-├── figures/          # Gràfics generats automàticament
-├── informes/         # Informes PDF generats automàticament
-├── modules/          # Mòduls Python
-│   ├── analisi.py
-│   ├── config_escenaris.py
-│   ├── generador.py
-│   ├── simulacio.py
-│   └── sorteig.py
+├── data/             # Input CSVs and results (initially empty)
+├── figures/          # Automatically generated graphs
+├── reports/          # Automatically generated PDF reports
+├── modules/          # Python modules
+│   ├── analysis.py
+│   ├── scenario_config.py
+│   ├── generator.py
+│   ├── simulation.py
+│   └── lottery.py
 │
-├── main_pipeline.py  # Llançar tota la simulació + informes
-├── main_generador.py # Generar dades inicials personalitzades
-├── main_simulacio.py # Simulació simple
-├── main_analisi.py   # Només generar gràfics
-├── main_informes.py  # Combinar PDFs
+├── main_pipeline.py  # Run the complete simulation + reports
+├── main_generator.py # Generate custom initial data
+├── main_simulation.py # Simple simulation
+├── main_analysis.py  # Generate graphs only
+├── main_reports.py   # Merge PDFs
 │
-├── requirements.txt  # Dependències Python
-├── README.md         # Aquest document
+├── requirements.txt  # Python dependencies
+├── README.md         # This document
 │
-└── .gitignore        # Excloure carpetes i fitxers no necessaris
+└── .gitignore        # Exclude unnecessary folders and files
+```
 
-````
+## 🚀 How to Run the Project
 
-## 🚀 Com executar el projecte
+### 1. Install Dependencies
+Make sure you have Python 3.8 or higher installed.
 
-1. Instal·lació de dependències
-Assegura't de tenir Python 3.8 o superior.
+```bash
+pip install -r requirements.txt
+```
 
-    `pip install -r requirements.txt`
+### 2. Run Full Scenario Simulations
+Execute the full pipeline:
 
-2. Simular Escenaris Complets
-Executa el pipeline complet:
+```bash
+python3 main_pipeline.py
+```
 
-    `python3 main_pipeline.py`
+### Outputs:
+- CSV files saved in `data/`
+- Graphs saved in `figures/SCENARIO_NAME/`
+- PDF reports saved in `reports/SCENARIO_NAME.pdf`
 
+## 🧐 Defined Scenarios
 
-    Resultats:
+| Scenario | Description |
+|:---------|:------------|
+| `base` | Basic configuration (groups of at least 8 members, fixed captures) |
+| `groups_of_6` | Simulation with smaller groups (minimum 6 members) |
+| `variable_captures` | Variable number of captures between 60 and 300 per year |
+| `new_and_retired` | Hunters joining and leaving each year |
 
-    * CSVs a data/
-    * Gràfics a figures/NOM_ESCENARI/
-    * Informe PDF a informes/NOM_ESCENARI.pdf
+## 📊 What This Project Generates
 
-## 🧠 Escenaris Definits
+- Heatmap of consecutive captures (by ID, Mode A/B)
+- Stacked bar charts showing capture percentages by year
+- Detailed PDF report for each scenario
+- Merged final PDF report combining all scenarios
 
+## 🔥 Libraries Used
 
-#### Escenari	Descripció
-* base	Configuració bàsica (colles mínim 8 membres, captures fixes)
-* colles_de_6	Simulació amb colles més petites (mínim 6 membres)
-* captures_variables	Nombre variable de captures entre 60 i 300 per any
-* nous_i_retirats	Incorporació i retirada de caçadors cada any
+- `pandas`
+- `numpy`
+- `matplotlib`
+- `seaborn`
+- `PyPDF2`
+- `random`
 
-#### 📊 Què genera el projecte?
+## 🎯 Achieved Goals
 
-* Heatmap de captures consecutives (per ID, Modalitat A/B)
-* Gràfic de barres apilades de percentatges de captures per any
-* Informe PDF per cada escenari (explicacions + gràfics)
-* Unió de tots els informes en un PDF únic
+- 🧹 Modular architecture (generator, simulator, analyzer, reports)
+- 🔥 Full automation of the simulation pipeline
+- 📊 Professional-quality data visualizations
+- 🧠 Dynamic hunter management: entries and retirements
+- 📦 Ready for scaling with new scenarios and configurations
+- 📸 Sample Graphs: Heatmaps and Stacked Bar Charts
 
+## 🧐 Final Reflection
 
-## 🔥 Llibreries utilitzades
+This project allowed me to:
 
-    pandas
-    numpy
-    matplotlib
-    seaborn
-    PyPDF2
-    random
+- Manage complex data-oriented projects.
+- Learn how to modularize and scale realistic simulations.
+- Automate generation of analytical reports.
+- Practice building end-to-end data pipelines.
 
-
-## 🎯 Objectius assolits
-
-* 🧩 Arquitectura modular (generador, simulador, analitzador, informes)
-* 🔥 Automatització total del pipeline de simulació
-* 📊 Visualització professional de dades
-* 🧠 Gestió dinàmica de caçadors: nous ingressos i retirades
-* 📦 Preprarat per a ser escalat amb nous escenaris o configuracions
-* 📸 Exemples de Gràfics
-
-
-    * Heatmap	
-    * Barres Apilades
-
-
-## 🧠 Reflexió Final
-
-Aquest projecte ha suposat:
-
-* Treballar la gestió de projectes de dades complexos.
-* Aprendre a modularitzar i escalar simulacions realistes.
-* Generar informes automàtics a partir d'anàlisis de dades.
-* Practicar la creació de pipelines de dades end-to-end.
-
-
-## 📎 Repositoris Relacionats
+## 📌 Related Repositories
 
 ...
 
+---
 
-#### 🌟 Si t'ha agradat aquest projecte, deixa un ⭐ al repositori!
-#### 🔗 També pots connectar amb mi a [LinkedIn](https://www.linkedin.com/in/jordi-ordoñez-814614341/)!
+#### 🌟 If you enjoyed this project, please leave a ⭐ star on the repository!
+#### 🔗 Feel free to connect with me on [LinkedIn](https://www.linkedin.com/in/jordi-ordoñez-814614341/)!

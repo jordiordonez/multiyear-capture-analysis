@@ -2,54 +2,84 @@
 
 import os
 import random
+import pandas as pd
+
 from modules.generador import generar_dades_inicials
 from modules.simulacio import simular_6_anys_variable
 from modules.analisi import generar_heatmaps_i_grafics
+from modules.report import generar_report_escenari, combinar_markdowns
 from modules.config_escenaris import escenaris
-from main_informes import generar_informe_escenari, combinar_informes
 
-# Crear carpetes si no existeixen
+# Assegurar carpetes
 os.makedirs('data', exist_ok=True)
 os.makedirs('figures', exist_ok=True)
 os.makedirs('reports', exist_ok=True)
 
+# Anem guardant noms dels escenaris
 noms_escenaris = []
 
+# Pipeline principal
 for escenari in escenaris:
-    nom = escenari["nom"]
-    print(f"🏹 Simulant: {nom}...")
-    noms_escenaris.append(nom)
+    print(f"\n🏹 Simulant: {escenari['nom']}...\n")
 
-    # Generar estructura inicial de caçadors
+    # 1. Generar dades inicials
     generar_dades_inicials(
-        total_cacadors_colla=175,
-        total_individuals=190,
-        min_colla_size=escenari["min_colla"],
-        max_colla_size=escenari["max_colla"],
+        total_cacadors_colla=escenari.get('total_cacadors_colla', 175),
+        total_individuals=escenari.get('total_individuals', 190),
+        min_colla_size=escenari.get('min_colla', 8),
+        max_colla_size=escenari.get('max_colla', 20),
         output_path='data/sorteig.csv'
     )
 
-    # Decideix el tipus de simulació
-    if isinstance(escenari["captures_per_any"], list):
-        # Captures variables
-        captures = [random.randint(escenari["captures_per_any"][0], escenari["captures_per_any"][1]) for _ in range(6)]
-        simular_6_anys_variable('sorteig.csv', captures, seed=42)
-    else:
-        # Captures fixes
-        simular_6_anys('sorteig.csv', escenari["captures_per_any"], years=6, seed=42,
-                       new_hunters_range=escenari.get('new_hunters_per_year', 0),
-                       retired_hunters_range=escenari.get('retired_hunters_per_year', 0),
-                       min_colla_size=escenari["min_colla"])
+    # 2. Simulació
+    captures = escenari['captures_per_any']
+    captures_per_year = [random.randint(captures[0], captures[1]) for _ in range(6)]
+    simular_6_anys_variable(
+        initial_csv='sorteig.csv',
+        captures_per_year_list=captures_per_year,
+        seed=42
+    )
 
-    # Crear carpeta específica de figures
-    figures_folder = os.path.join('figures', nom)
-    os.makedirs(figures_folder, exist_ok=True)
+    # 3. Crear figures
+    carpeta_figures = os.path.join('figures', escenari['nom'])
+    generar_heatmaps_i_grafics(output_folder=carpeta_figures)
 
-    # Generar figures
-    generar_heatmaps_i_grafics(output_folder=figures_folder)
+    # 4. Generar informe per escenari
+    df_hist = pd.read_csv('data/historial_6_anys.csv')
 
-    # Generar informe individual
-    generar_informe_escenari(nom_escenari=nom, figures_folder=figures_folder)
+    # ➡️ Nova part: construir evolució any a any
+    evolucio_anys = []
+    for anyo in range(1, 7):
+        caçadors_total = len(df_hist[df_hist['any'] == anyo])
+        caçadors_colla = len(df_hist[(df_hist['any'] == anyo) & (df_hist['Modalitat'] == 'A')])
+        caçadors_individual = len(df_hist[(df_hist['any'] == anyo) & (df_hist['Modalitat'] == 'B')])
+        captures_adjudicades = df_hist[(df_hist['any'] == anyo) & (df_hist['adjudicats'] == 1)].shape[0]
 
-# Finalment, combinar tots els informes
-combinar_informes(noms_escenaris)
+        evolucio_anys.append({
+            'any': anyo,
+            'cacadors_total': caçadors_total,
+            'cacadors_colla': caçadors_colla,
+            'cacadors_individual': caçadors_individual,
+            'captures_adjudicades': captures_adjudicades
+        })
+
+    # ➡️ Ara cridem la funció passant evolucio_anys
+    generar_report_escenari(
+        nom_escenari=escenari['nom'],
+        num_anys=6,
+        total_inicial=len(df_hist[df_hist['any'] == 1]),
+        num_colla=len(df_hist[(df_hist['any'] == 1) & (df_hist['Modalitat'] == 'A')]),
+        num_indiv=len(df_hist[(df_hist['any'] == 1) & (df_hist['Modalitat'] == 'B')]),
+        captures_per_any=captures,
+        new_hunters_per_year=escenari.get('new_hunters_per_year', 0),
+        retired_hunters_per_year=escenari.get('retired_hunters_per_year', 0),
+        evolucio_anys=evolucio_anys
+    )
+    noms_escenaris.append(escenari['nom'])
+
+
+
+# 5. Combinar en un sol Markdown
+combinar_markdowns(noms_escenaris)
+
+print("\n✅ Pipeline completat correctament!\n")

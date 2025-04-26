@@ -54,19 +54,28 @@ def generar_informe_escenari(nom_escenari, figures_folder):
     pdf.output(informe_path)
     print(f"✅ Informe {nom_escenari} generat a {informe_path}")
 
-def combinar_informes(noms_escenaris):
+def combinar_informes(noms_escenaris: list, output_path='reports/final_report.pdf'):
     """
-    Combina múltiples informes PDF en un sol PDF final.
+    Combina tots els informes d'escenaris en un únic informe final PDF.
+
+    Args:
+        noms_escenaris: Llista amb els noms dels escenaris (sense extensió).
+        output_path: Ruta del fitxer PDF final combinat.
     """
     merger = PdfMerger()
+
     for nom in noms_escenaris:
-        informe_path = f"reports/informe_{nom}.pdf"
+        informe_path = os.path.join('reports', f"{nom}.pdf")
         if os.path.exists(informe_path):
             merger.append(informe_path)
         else:
-            print(f"⚠️ No s'ha trobat {informe_path}, saltant...")
+            print(f"⚠️ Avís: No trobat {informe_path}, saltant...")
 
-    final_path = "reports/informe_complet.pdf"
-    merger.write(final_path)
+    # Crear carpeta si no existeix
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Escriure informe final
+    merger.write(output_path)
     merger.close()
-    print(f"🎯 Informe complet creat: {final_path}")
+
+    print(f"✅ Informe final combinat desat a {output_path}")
