@@ -1,0 +1,11 @@
+# Ignorar carpetes de dades i sortides
+data/
+figures/
+informes/
+
+# Fitxers de sistema
+.DS_Store
+*.pyc
+__pycache__/
+.env
+venv/
