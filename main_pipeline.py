@@ -37,7 +37,9 @@ for escenari in escenaris:
     simular_6_anys_variable(
         initial_csv='sorteig.csv',
         captures_per_year_list=captures_per_year,
-        seed=42
+        seed=42,
+        new_hunters_range=escenari['new_hunters_per_year'],
+        retired_hunters_range=escenari['retired_hunters_per_year']
     )
 
     # 3. Crear figures
@@ -66,14 +68,9 @@ for escenari in escenaris:
     # ➡️ Ara cridem la funció passant evolucio_anys
     generar_report_escenari(
         nom_escenari=escenari['nom'],
-        num_anys=6,
-        total_inicial=len(df_hist[df_hist['any'] == 1]),
-        num_colla=len(df_hist[(df_hist['any'] == 1) & (df_hist['Modalitat'] == 'A')]),
-        num_indiv=len(df_hist[(df_hist['any'] == 1) & (df_hist['Modalitat'] == 'B')]),
         captures_per_any=captures,
         new_hunters_per_year=escenari.get('new_hunters_per_year', 0),
         retired_hunters_per_year=escenari.get('retired_hunters_per_year', 0),
-        evolucio_anys=evolucio_anys
     )
     noms_escenaris.append(escenari['nom'])
 

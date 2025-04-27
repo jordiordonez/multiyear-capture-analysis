@@ -14,10 +14,10 @@ def generar_heatmaps_i_grafics(file_path='data/historial_6_anys.csv', output_fol
     data = data.sort_values(by=['ID', 'any'])
 
     previous_id = None
-    streak = None
+    streak = 0
     for idx, row in data.iterrows():
         current_id = row['ID']
-        adjudicat = row['adjudicats']
+        adjudicat = row.get('adjudicats', 0)
         if current_id != previous_id:
             streak = 1 if adjudicat == 1 else 0
         else:
@@ -28,21 +28,32 @@ def generar_heatmaps_i_grafics(file_path='data/historial_6_anys.csv', output_fol
     # Clamp captures consecutives
     data['captures_consecutives_clamped'] = data['captures_consecutives'].clip(lower=-3, upper=3)
 
-    pivot_A = data[data['Modalitat'] == 'A'].pivot(index='ID', columns='any', values='captures_consecutives_clamped').fillna(0)
-    pivot_B = data[data['Modalitat'] == 'B'].pivot(index='ID', columns='any', values='captures_consecutives_clamped').fillna(0)
-    empty_row = pd.DataFrame(np.nan, index=['', '', ''], columns=pivot_A.columns)
-    pivot_heatmap = pd.concat([pivot_A, empty_row, pivot_B])
+    # Create heatmap pivots without filling NaN
+    pivot_A = data[data['Modalitat'] == 'A'].pivot(
+        index='ID',
+        columns='any',
+        values='captures_consecutives_clamped'
+    )
+    pivot_B = data[data['Modalitat'] == 'B'].pivot(
+        index='ID',
+        columns='any',
+        values='captures_consecutives_clamped'
+    )
 
-    # Colors fixos
+    # Insert empty separator rows
+    empty_rows = pd.DataFrame(np.nan, index=["", "", ""], columns=pivot_A.columns)
+    pivot_heatmap = pd.concat([pivot_A, empty_rows, pivot_B])
+
+    # Colors mapping
     valors_fixos = [-3, -2, -1, 0, 1, 2, 3]
     valor_to_color = {
-        -3: "#8B0000",  # Vermell fosc
-        -2: "#FF6347",  # Vermell clar
-        -1: "#FFA500",  # Taronja
-         0: "#FFD700",  # Groc
-         1: "#87CEFA",  # Blau clar
-         2: "#0000CD",  # Blau fosc
-         3: "#4B0082",  # Violeta fosc
+        -3: "#8B0000",  # Dark red
+        -2: "#FF6347",  # Light red
+        -1: "#FFA500",  # Orange
+         0: "#FFD700",  # Gold
+         1: "#87CEFA",  # Light blue
+         2: "#0000CD",  # Dark blue
+         3: "#4B0082",  # Indigo
     }
     cmap = ListedColormap([valor_to_color[v] for v in valors_fixos])
     norm = BoundaryNorm(boundaries=[-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5], ncolors=7)
@@ -58,19 +69,22 @@ def generar_heatmaps_i_grafics(file_path='data/historial_6_anys.csv', output_fol
         cbar=False
     )
 
+    # Draw separation line
     separacio_index = len(pivot_A) + 1.5
     plt.hlines(y=separacio_index, xmin=0, xmax=pivot_heatmap.shape[1], colors='black', linewidth=8)
 
+    # Labels for A/B sections
     plt.text(-0.2, (len(pivot_A)-1)/2, 'Modalitat A', va='center', ha='center', rotation=90, fontsize=18, fontweight='bold')
     plt.text(-0.2, len(pivot_A)+2+(len(pivot_B)-1)/2, 'Modalitat B', va='center', ha='center', rotation=90, fontsize=18, fontweight='bold')
 
-    plt.suptitle('Adjudicacions Consecutives per ID\\nSeparat per Modalitat A i B', fontsize=26, fontweight='bold', y=.95)
+    plt.suptitle('Adjudicacions Consecutives per ID\nSeparat per Modalitat A i B', fontsize=26, fontweight='bold', y=.95)
     plt.xlabel('Any', fontsize=20, fontweight='bold')
     plt.ylabel('ID', fontsize=20, fontweight='bold')
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=12)
     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
+    # Colorbar
     cbar_ax = plt.gcf().add_axes([0.93, 0.25, 0.02, 0.5])
     cb = ColorbarBase(cbar_ax, cmap=cmap, norm=norm, ticks=valors_fixos)
     cb.ax.set_yticklabels(valors_fixos, fontsize=18)
@@ -97,18 +111,12 @@ def generar_heatmaps_i_grafics(file_path='data/historial_6_anys.csv', output_fol
     separacio = 0.15
 
     fig, ax = plt.subplots(figsize=(20, 10))
-
-    # Inicialitzar bottom
     bottom_A = np.zeros(len(x))
     bottom_B = np.zeros(len(x))
 
-    # Comprovem quins valors existeixen realment
     valors_reals = sorted(set(percent_A.columns).union(percent_B.columns))
-
-    # Pintem valor per valor, any per any
     for v in valors_fixos:
         color = valor_to_color[v]
-
         if v in valors_reals:
             data_A_pct = percent_A.get(v, pd.Series(0, index=anys))
             data_B_pct = percent_B.get(v, pd.Series(0, index=anys))
@@ -132,18 +140,16 @@ def generar_heatmaps_i_grafics(file_path='data/historial_6_anys.csv', output_fol
             bottom_A += np.array(data_A_pct)
             bottom_B += np.array(data_B_pct)
 
-    # Etiqueta Modalitat A/B
     for i in range(len(x)):
         ax.text(x[i] - bar_width/2 - separacio/2, 101, 'A', ha='center', fontsize=14, fontweight='bold')
         ax.text(x[i] + bar_width/2 + separacio/2, 101, 'B', ha='center', fontsize=14, fontweight='bold')
 
     ax.set_xlabel('Any', fontsize=18, fontweight='bold')
     ax.set_ylabel('Percentatge (%)', fontsize=18, fontweight='bold')
-    ax.set_title('Comparació Modalitat A vs B\\nRepartició Percentual Adjudicacions Consecutives per Any', fontsize=24, fontweight='bold', pad=30)
+    ax.set_title('Comparació Modalitat A vs B\nRepartició Percentual Adjudicacions Consecutives per Any', fontsize=24, fontweight='bold', pad=30)
     ax.set_xticks(x)
     ax.set_xticklabels(anys, fontsize=16)
 
-    # Llegenda: només valors reals que han aparegut
     handles = [plt.Rectangle((0,0),1,1,color=valor_to_color[v]) for v in valors_fixos if v in valors_reals]
     labels = [str(v) for v in valors_fixos if v in valors_reals]
     ax.legend(handles, labels, title='Adjudicacions Consecutives', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=14, title_fontsize=16)
