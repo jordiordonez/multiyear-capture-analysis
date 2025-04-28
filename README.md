@@ -20,12 +20,13 @@ Simulation of isard captures across various controlled hunting scenarios, genera
 │   ├── config_escenaris.py
 │   ├── generador.py
 │   ├── simulacio.py
+│   ├── simulacio_estrategics.py
 │   └── sorteig.py
 │
 ├── main_pipeline.py  # Run the complete simulation + reports
 ├── main_generador.py # Generate custom initial data
 ├── main_analysis.py  # Generate graphs only
-├── main_reports.py   # Merge Markdown reports
+├── app_sorteig.py
 │
 ├── requirements.txt  # Python dependencies
 ├── README.md         # This document
@@ -89,6 +90,45 @@ python3 main_pipeline.py
 - 🧠 Dynamic hunter management: entries and retirements
 - 📦 Ready for scaling with new scenarios and configurations
 - 📸 Sample Graphs: Heatmaps and Stacked Bar Charts
+
+## 🛠️ Additional Modules
+
+    /modules/simulacio_estrategics.py
+
+This module simulates strategic behavior among hunters over multiple years.
+It explores how coordination strategies (e.g., grouping past winners together) can influence the capture allocation results over time.
+It simulates:
+* A set of strategic hunters who reorganize themselves every year into new collas.
+* The condition that only past winners can form new strategic groups.
+* The evolution of their success compared to normal (non-strategic) hunters.
+
+**Simulation Features:**
+* Dynamic annual regrouping based on last year’s capture success.
+* Measurement of the cumulative advantage of strategic behavior.
+* Comparison against the baseline (non-strategic random grouping).
+
+**Key Purpose:**
+To evaluate whether collaborative strategies can systematically improve a hunter’s odds of securing captures in a fair allocation system.
+
+# 🖥️ App Sorteig.
+
+This is a separate Streamlit web application designed for real-world allocation of captures based on hunter registrations.
+It offers a simple and intuitive interface to upload a real CSV file of hunters and immediately perform the lottery allocation (sorteig).
+It allows users to:
+* Upload a CSV file of registered hunters.
+Specify:
+* The total number of available captures.
+* An optional random seed for reproducibility.
+* Execute the complete allocation algorithm.
+* Download a new CSV file containing:
+    * Allocation results (adjudicats column).
+    * Updated priorities and history (nova_prioritat, nou_anys_sense_captura).
+
+Key Purpose:
+Transforms the simulated logic into a usable web application for practical management of real capture processes.
+Deployment:
+The application is currently hosted via Streamlit Community Cloud 🔗 [Visit App.](https://multiyear-capture-analysis-hfn76hzqpwmup5xamhgaeq.streamlit.app)
+
 
 ## 🧐 Final Reflection
 

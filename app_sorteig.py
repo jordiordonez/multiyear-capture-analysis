@@ -120,7 +120,7 @@ def assignar_isards_sorteig_csv(
 
 st.set_page_config(page_title="App Sorteig Captures Isard", page_icon="🦌", layout="centered")
 
-st.title("🦌 Sorteig de Captures d'Isard")
+st.title("Sorteig de Captures d'Isard")
 
 # 1. Pujar fitxer
 uploaded_file = st.file_uploader("Carrega el fitxer CSV d'inscrits:", type=["csv"])
