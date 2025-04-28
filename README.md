@@ -23,7 +23,7 @@ Simulation of isard captures across various controlled hunting scenarios, genera
 │   └── sorteig.py
 │
 ├── main_pipeline.py  # Run the complete simulation + reports
-├── main_generator.py # Generate custom initial data
+├── main_generador.py # Generate custom initial data
 ├── main_analysis.py  # Generate graphs only
 ├── main_reports.py   # Merge Markdown reports
 │

@@ -17,11 +17,11 @@ os.makedirs('reports', exist_ok=True)
 
 # Anem guardant noms dels escenaris
 noms_escenaris = []
-
+index_escenari = 0
 # Pipeline principal
 for escenari in escenaris:
     print(f"\n🏹 Simulant: {escenari['nom']}...\n")
-
+    index_escenari += 1
     # 1. Generar dades inicials
     generar_dades_inicials(
         total_cacadors_colla=escenari.get('total_cacadors_colla', 175),
@@ -36,6 +36,8 @@ for escenari in escenaris:
     captures_per_year = [random.randint(captures[0], captures[1]) for _ in range(6)]
     simular_6_anys_variable(
         initial_csv='sorteig.csv',
+        min_colla_size=escenari.get('min_colla', 8),
+        max_colla_size=escenari.get('max_colla', 20),
         captures_per_year_list=captures_per_year,
         seed=42,
         new_hunters_range=escenari['new_hunters_per_year'],
@@ -68,9 +70,11 @@ for escenari in escenaris:
     # ➡️ Ara cridem la funció passant evolucio_anys
     generar_report_escenari(
         nom_escenari=escenari['nom'],
+        min_colla_size=escenari['min_colla'],
         captures_per_any=captures,
         new_hunters_per_year=escenari.get('new_hunters_per_year', 0),
         retired_hunters_per_year=escenari.get('retired_hunters_per_year', 0),
+        index_escenari=index_escenari,
     )
     noms_escenaris.append(escenari['nom'])
 

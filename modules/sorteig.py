@@ -145,8 +145,3 @@ def assignar_isards_sorteig_csv(
     df.drop(columns=['rand'], errors='ignore').to_csv(output_csv, index=False)
     return df
 
-
-# Exemple d'ús
-if __name__ == "__main__":
-    resultats = assignar_isards_sorteig_csv("sorteig.csv", total_captures=150, seed=0)
-
