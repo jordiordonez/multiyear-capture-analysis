@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import tempfile
 
-ef assignar_isards_sorteig_csv(
+def assignar_isards_sorteig_csv(
     file_csv: str,
     total_captures: int,
     output_csv: str = "resultats.csv",
