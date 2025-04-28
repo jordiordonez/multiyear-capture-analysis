@@ -6,7 +6,7 @@ def assignar_isards_sorteig_csv(
     file_csv: str,
     total_captures: int,
     output_csv: str = "resultats.csv",
-    seed: Optional[int] = None
+    seed: [int] = None
 ) -> pd.DataFrame:
     rng = np.random.RandomState(seed) if seed is not None else np.random
     df = pd.read_csv(file_csv, sep=';')
