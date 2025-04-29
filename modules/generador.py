@@ -96,3 +96,4 @@ def generar_dades_inicials(
     print(f"✅ Dades inicials generades i desades a {output_path}")
 
     return df
+
