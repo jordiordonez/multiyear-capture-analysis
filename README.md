@@ -138,6 +138,7 @@ This project allowed me to:
 - Learn how to modularize and scale realistic simulations.
 - Automate generation of analytical reports.
 - Practice building end-to-end data pipelines.
+- Create a Streamlit app to allow users to allocate captures.
 
 ## 📌 Related Repositories
 
