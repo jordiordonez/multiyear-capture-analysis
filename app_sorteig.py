@@ -134,7 +134,7 @@ if file:
     st.dataframe(df)
 
 # 3. Opcions de semilla
-seed = st.number_input("Semilla opcional (deixa buit per aleatori):", min_value=0, step=1, format="%d")
+seed = st.number_input("Llavior opcional: (Nombre enter)", min_value=0, step=1, format="%d")
 if seed == 0:
     seed = None
 
