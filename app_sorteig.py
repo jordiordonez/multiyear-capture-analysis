@@ -117,12 +117,11 @@ def assignar_captura_csv(
 
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
+
 # 1. Selecció inicial
 especie = st.selectbox("Espècie:", ['Isard','Cabirol','Mufló'])
 unidad = st.selectbox("Unitat de gestió:", ['VC Enclar','VC Xixerella','VCR Ansó-Sorteny','VCR Ansó','VC Sorteny','VT Escaldes-Engordany','TCC'])
-# 2. Semilla opcional
-seed = st.number_input("Semilla opcional (deixa 0 per aleatori):", min_value=0, step=1, format="%d")
-seed = None if seed == 0 else seed
+
 # 3. Carrega CSV i vista prèvia
 df = None
 file = st.file_uploader("CSV sol·licitants", type='csv')
@@ -130,50 +129,41 @@ if file:
     df = pd.read_csv(file, sep=';')
     st.subheader("Previsualització de sol·licitants")
     st.dataframe(df)
-# 4. Configuració iterativa de tipus de captura
-if especie == 'Isard' and unidad == 'TCC':
-    total_cap = st.number_input("Nombre total de captures:", min_value=1, step=1)
-    tipus_captures = None
-    quantitats = None
-else:
-    options = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
-    # Inicialitza comptador de blocs si no existeix
-    if 'num_tipus' not in st.session_state:
-        st.session_state['num_tipus'] = 1
-    # Mostra blocs de configuració per cada Tipus
-    for i in range(st.session_state['num_tipus']):
-        st.markdown(f"**Tipus {i+1}:**")
-        tipus = st.selectbox(f"Selecciona Tipus {i+1}:", options + ['+ Composat'], key=f"tipus_{i}")
-        if tipus == '+ Composat':
-            tipus_val = st.text_input(f"Defineix Tipus compost {i+1} (e.g. Trofeu+Mascle):", key=f"comp_{i}")
-        else:
-            tipus_val = st.multiselect(f"Subtipus de {tipus} (múltiple / Indeterminat exclusiu):", options, key=f"sub_{i}")
-            # Si Indeterminat seleccionat, ignora la resta
-            if isinstance(tipus_val, list) and 'Indeterminat' in tipus_val:
-                tipus_val = ['Indeterminat']
-        quant = st.number_input(f"Nº captures per bloc {i+1}:", min_value=1, step=1, key=f"quant_{i}")
-        # Guarda valor final
-        st.session_state[f"final_tipus_{i}"] = tipus_val
-        st.session_state[f"final_quant_{i}"] = quant
-    # Botó per afegir un nou bloc
-    if st.button("Afegeix un altre Tipus"):
-        st.session_state['num_tipus'] += 1
-    # Recull llistes definitives
-    tipus_captures = [st.session_state[f"final_tipus_{i}"] for i in range(st.session_state['num_tipus'])]
-    quantitats = {st.session_state[f"final_tipus_{i}"]: st.session_state[f"final_quant_{i}"] for i in range(st.session_state['num_tipus'])}
-# 5. Execució amb botó
-executar = st.button("Executar sorteig")
-if executar and df is not None:
-    if especie == 'Isard' and unidad == 'TCC':
-        result = assignar_isards_sorteig_csv(df, total_cap, seed)
-    else:
-        result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
-        st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
-    st.subheader("Resultats del sorteig")
-    st.dataframe(result)
-    st.download_button('Descarregar CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
-else:
-    if executar and df is None:
+
+# 4. Configuració dinàmica de Tipus de captura
+options = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
+if 'tipus_list' not in st.session_state:
+    st.session_state['tipus_list'] = []
+if st.button("Afegeix Tipus"):
+    st.session_state['tipus_list'].append(None)
+
+tipus_captures = []
+quantitats = {}
+for i in range(len(st.session_state['tipus_list'])):
+    st.subheader(f"Tipus {i+1}")
+    sel = st.multiselect(f"Selecció Tipus {i+1}", options, key=f"tipus_{i}")
+    if 'Indeterminat' in sel:
+        sel = ['Indeterminat']
+    qty = st.number_input(f"Nº captures Tipus {i+1}", min_value=1, step=1, key=f"qty_{i}")
+    str_sel = sel[0] if len(sel)==1 else '+'.join(sel)
+    tipus_captures.append(str_sel)
+    quantitats[str_sel] = qty
+
+# 2. Semilla opcional
+seed = st.number_input("Llavor opcional (Nombre enter):", min_value=0, step=1, format="%d")
+seed = None if seed == 0 else seed
+
+# 5. Executa el sorteig amb botó
+if st.button("Executar sorteig"):
+    if df is None:
         st.warning("Cal pujar un CSV abans d'executar el sorteig.")
-    elif df is not None and ejecutar:
-        st.warning("Completa la configuració de tipus i quantitats abans d'executar.")
+    else:
+        if especie == 'Isard' and unidad == 'TCC':
+            total_cap = sum(quantitats.values()) if quantitats else 0
+            result = assignar_isards_sorteig_csv(df, total_cap, seed)
+        else:
+            result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
+            st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
+        st.subheader("Resultats del sorteig")
+        st.dataframe(result)
+        st.download_button('Descarregar CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
