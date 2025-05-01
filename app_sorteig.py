@@ -70,7 +70,6 @@ def assignar_isards_sorteig_csv(
         df.loc[idxs,'adjudicats'] += 1
         rem -= take
 
-    # Calcular nova prioritat i història
     df['nova_prioritat'] = df['adjudicats'].apply(lambda x: 4 if x==1 else 2)
     df['nou_anys_sense_captura'] = df.apply(
         lambda r: 0 if r['adjudicats']==1 else r['anys_sense_captura']+1,
@@ -82,7 +81,8 @@ def assignar_isards_sorteig_csv(
 def assignar_captura_csv(
     df: pd.DataFrame,
     tipus_captures: list,
-    quantitats: dict
+    quantitats: dict,
+    seed: int = None
 ) -> pd.DataFrame:
     req = {'ID','Modalitat','Prioritat','Colla_ID','anys_sense_captura','Resultat_sorteigs_mateixa_sps'}
     if not req.issubset(df.columns):
@@ -91,7 +91,7 @@ def assignar_captura_csv(
     df = df.copy()
     if 'Adjudicats' not in df.columns:
         df['Adjudicats'] = 0
-    rng = np.random.RandomState(None)
+    rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
 
     # Assignació per tipus
     for tipus in tipus_captures:
@@ -120,46 +120,58 @@ st.title("App Sorteig Pla de Caça")
 
 # 1. Selecció inicial
 especie = st.selectbox("Espècie:", ['Isard','Cabirol','Mufló'])
-unidad = st.selectbox("Unitat de gestió:", [
+unidad = st.selectbox("Unitat de gestió:",[
     'VC Enclar','VC Xixerella','VCR Ansó-Sorteny','VCR Ansó',
     'VC Sorteny','VT Escaldes-Engordany','TCC'
 ])
 
-# 2. Configuració captures
-tipus_captures = []
-quantitats = {}
-if especie == 'Isard' and unidad == 'TCC':
-    total_cap = st.number_input("Nombre total de captures:", min_value=1, step=1)
-else:
-    simple_opts = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
-    simples = st.multiselect("Tipus simples:", simple_opts)
-    # Camps per tipus compostos
-    compostos_input = st.text_area(
-        "Tipus compostos (un per línia, ex: Trofeu+Mascle +Femella)", height=100
-    )
-    compostos = [s.strip() for s in compostos_input.splitlines() if s.strip()]
-    # Indeterminat exclusiu
-    if 'Indeterminat' in simples:
-        tipus_captures = ['Indeterminat']
-    else:
-        tipus_captures = simples + compostos
-    # Quantitats per cada tipus
-    for t in tipus_captures:
-        quantitats[t] = st.number_input(f"Nº captures {t}:", min_value=1, step=1)
-
-# 3. Pujar CSV i execució
+# 2. Carrega CSV i vista prèvia
+df = None
 file = st.file_uploader("CSV sol·licitants", type='csv')
 if file:
     df = pd.read_csv(file, sep=';')
+    st.subheader("Previsualització de sol·licitants")
+    st.dataframe(df)
+
+# 3. Opcions de semilla
+seed = st.number_input("Semilla opcional (deixa buit per aleatori):", min_value=0, step=1, format="%d")
+if seed == 0:
+    seed = None
+
+# 4. Configuració captures
+tipus_captures = []
+quantitats = {}
+if df is not None:
     if especie == 'Isard' and unidad == 'TCC':
-        result = assignar_isards_sorteig_csv(df, total_cap)
+        total_cap = st.number_input("Nombre total de captures:", min_value=1, step=1)
     else:
-        result = assignar_captura_csv(df, tipus_captures, quantitats)
-        st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
-    st.dataframe(result)
-    st.download_button(
-        'Descarregar resultat CSV', result.to_csv(index=False),
-        file_name=f"sorteig_{especie}_{unidad}.csv"
-    )
+        simple_opts = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
+        simples = st.multiselect("Tipus simples:", simple_opts)
+        compostos_input = st.text_area(
+            "Tipus compostos (un per línia, ex: Trofeu+Mascle)", height=100
+        )
+        compostos = [s.strip() for s in compostos_input.splitlines() if s.strip()]
+        if 'Indeterminat' in simples:
+            tipus_captures = ['Indeterminat']
+        else:
+            tipus_captures = simples + compostos
+        for t in tipus_captures:
+            quantitats[t] = st.number_input(f"Nº captures {t}:", min_value=1, step=1)
+
+# 5. Botó d'execució
+if df is not None and ((especie=='Isard' and unidad=='TCC' and 'total_cap' in locals()) or quantitats):
+    if st.button("Executar sorteig"):
+        if especie=='Isard' and unidad=='TCC':
+            result = assignar_isards_sorteig_csv(df, total_cap, seed)
+        else:
+            result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
+            st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
+        st.subheader("Resultats del sorteig")
+        st.dataframe(result)
+        st.download_button(
+            'Descarregar resultat CSV', result.to_csv(index=False),
+            file_name=f"sorteig_{especie}_{unidad}.csv"
+        )
 else:
-    st.info("Puja un CSV per iniciar el sorteig.")
+    if file:
+        st.warning("Completa la configuració de captures abans d'executar el sorteig.")
