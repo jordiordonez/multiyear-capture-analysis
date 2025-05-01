@@ -9,7 +9,7 @@ def assignar_isards_sorteig_csv(
     total_captures: int,
     seed: int = None
 ) -> pd.DataFrame:
-    rng = np.random.RandomState(seed) if seed is not None else np.random
+    rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
     required = {'ID','Modalitat','Prioritat','Colla_ID','anys_sense_captura'}
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
