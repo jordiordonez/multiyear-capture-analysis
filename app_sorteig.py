@@ -114,52 +114,50 @@ if file:
 
 # 4. Configuració de Tipus de captura dinàmica
 options = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
-if 'configs' not in st.session_state:
-    st.session_state['configs'] = []
-if st.button("Afegeix Tipus"):
-    st.session_state['configs'].append({'selections': [], 'qty': 1})
-
-for idx, conf in enumerate(st.session_state['configs']):
-    st.subheader(f"Tipus {idx+1}")
-    sel = st.multiselect(
-        f"Seleccioni un o diversos valors per Tipus {idx+1}:",
-        options,
-        key=f"sel_{idx}"
-    )
-    # Gestió Indeterminat
-    if 'Indeterminat' in sel:
-        sel = ['Indeterminat']
-    st.session_state['configs'][idx]['selections'] = sel
-    qty = st.number_input(
-        f"Nº captures per Tipus {idx+1}:",
-        min_value=1,
-        step=1,
-        key=f"qty_{idx}"
-    )
-    st.session_state['configs'][idx]['qty'] = qty
+# Només mostrant si no Isard+TCC
+if not (especie == 'Isard' and unidad == 'TCC'):
+    if 'configs' not in st.session_state:
+        st.session_state['configs'] = []
+    if st.button("Afegeix Tipus"):
+        st.session_state['configs'].append({'selections': [], 'qty': 1})
+    for idx, conf in enumerate(st.session_state['configs']):
+        st.subheader(f"Tipus {idx+1}")
+        sel = st.multiselect(
+            f"Seleccioni un o diversos valors per Tipus {idx+1}:",
+            options,
+            key=f"sel_{idx}"
+        )
+        if 'Indeterminat' in sel:
+            sel = ['Indeterminat']
+        st.session_state['configs'][idx]['selections'] = sel
+        qty = st.number_input(
+            f"Nº captures per Tipus {idx+1}:",
+            min_value=1,
+            step=1,
+            key=f"qty_{idx}"
+        )
+        st.session_state['configs'][idx]['qty'] = qty
 
 # 2. Semilla opcional
-seed = st.number_input("Llavor opcional (0 = aleatori):", min_value=0, step=1, format="%d")
+seed = st.number_input("Llavor opcional (Nombre enter):", min_value=0, step=1, format="%d")
 seed = None if seed == 0 else seed
 
-# 5. Executar sorteig\
-
+# 5. Executar sorteig
 if st.button("Executar sorteig"):
     if df is None:
         st.warning("Cal pujar un CSV abans d'executar el sorteig.")
     else:
-        # Preparar llistes
         tipus_captures = []
         quantitats = {}
         if especie == 'Isard' and unidad == 'TCC':
-            total_cap = sum(conf['qty'] for conf in st.session_state['configs'])
+            total_cap = sum(conf['qty'] for conf in st.session_state.get('configs', []))
             try:
                 result = assignar_isards_sorteig_csv(df, total_cap, seed)
             except ValueError as e:
                 st.error(str(e))
                 st.stop()
         else:
-            for conf in st.session_state['configs']:
+            for conf in st.session_state.get('configs', []):
                 sel = conf['selections']
                 val = sel[0] if len(sel) == 1 else '+'.join(sel)
                 tipus_captures.append(val)
@@ -170,7 +168,6 @@ if st.button("Executar sorteig"):
                 st.error(str(e))
                 st.stop()
             st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
-        # Mostrar i descarregar
         st.subheader("Resultats del sorteig")
         st.dataframe(result)
         st.download_button(
