@@ -132,8 +132,10 @@ st.markdown("""
 
     1. Seleccioneu l'espècie i la unitat de gestió.
     2. Pugeu el fitxer CSV de sol·licitants.
-    3. Si no és Isard + TCC, afegiu un o més Tipus de captura:
-    - Clic a "Afegeix Tipus", seleccioneu un o diversos valors i indiqueu el nombre de captures.
+    3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran :
+    - Clic a "Afegeix Tipus", 
+    - seleccioneu un o diversos valors 
+    - indiqueu el nombre de captures.
     4. Opcional: introduïu una llavor per a reproduir el mateix sorteig.
     5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
     """)
