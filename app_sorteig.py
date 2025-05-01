@@ -156,6 +156,6 @@ else:
     st.info("Puja un CSV per iniciar el sorteig.")
 
 # Mostrar resultats\        
-st.dataframe(result)
+if result: st.dataframe(result)
 # Botó per descarregar
 st.download_button('Descarregar resultat CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
