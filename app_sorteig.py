@@ -114,7 +114,12 @@ if file:
 
 # 4. Configuració de Tipus de captura dinàmica
 options = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
-if not (especie == 'Isard' and unidad == 'TCC'):
+# Si Isard+TTC, demanar total captures
+tipus_captures = []
+quantitats = {}
+if especie == 'Isard' and unidad == 'TCC':
+    total_cap = st.number_input("Quantitat captures total:", min_value=1, step=1)
+else:
     if 'configs' not in st.session_state:
         st.session_state['configs'] = [{'selections': [], 'qty': 1}]
     if st.button("Afegeix Tipus"):
@@ -136,6 +141,9 @@ if not (especie == 'Isard' and unidad == 'TCC'):
         )
         st.session_state['configs'][idx]['selections'] = sel
         st.session_state['configs'][idx]['qty'] = qty
+        # Preparar llistes\        val = sel[0] if len(sel)==1 else '+'.join(sel)
+        tipus_captures.append(val)
+        quantitats[val] = qty
 
 # 2. Semilla opcional
 seed = st.number_input("Llavor opcional (Nombre enter):", min_value=0, step=1, format="%d")
