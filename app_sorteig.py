@@ -86,7 +86,7 @@ def assignar_captura_csv(
 
     # Creem columnes individuals per cada Tipus
     for i, tipus in enumerate(tipus_captures, start=1):
-        col_name = f'Adjudicats{tipus(1)}'
+        col_name = f'Adjudicats_Tipus{i}'
         df[col_name] = 0
 
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
@@ -94,7 +94,7 @@ def assignar_captura_csv(
     # Assignació per tipus en ordre
     for i, tipus in enumerate(tipus_captures, start=1):
         target = quantitats.get(tipus, 0)
-        col_name = f'Adjudicats_{tipus(1)}'
+        col_name = f'Adjudicats_Tipus_{i}'
         while assigned < target:
             # Calcula adjudicats acumulats global, no inclou per tipus
             df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
