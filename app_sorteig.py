@@ -67,59 +67,45 @@ def assignar_isards_sorteig_csv(df: pd.DataFrame, total_captures: int, seed: int
     return df
 
 # Funció per al sorteig individual (sense colles)
-def assignar_captura_csv(
-    df: pd.DataFrame,
-    tipus_captures: list,
-    quantitats: dict,
-    seed: int = None
-) -> pd.DataFrame:
-    # Validació columnes d'entrada
+def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dict, seed: int = None) -> pd.DataFrame:
     required = {'ID', 'Prioritat', 'anys_sense_captura', 'Resultat_sorteigs_mateixa_sps'}
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
-
     df = df.copy()
-    # Inicialitzar comptadors per cada tipus
     if 'Adjudicats' not in df.columns:
         df['Adjudicats'] = 0
-
-    # Creem columnes individuals per cada Tipus
-    for i, tipus in enumerate(tipus_captures, start=1):
-        safe = tipus.replace("+","_")                   # e.g. "Femella_Trofeu"
-        col_name = f"Adjudicats_Tipus{i}_{safe}"        # "Adjudicats_Tipus1_Femella_Trofeu"
-        df[col_name] = 0
-
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-
+    # Creem columnes individuals per cada Tipus\    for i, tipus in enumerate(tipus_captures, start=1):
+        safe = tipus.replace('+','_')
+        col_name = f'Adjudicats_Tipus{i}_{safe}'
+        df[col_name] = 0
     # Assignació per tipus en ordre
     for i, tipus in enumerate(tipus_captures, start=1):
         target = quantitats.get(tipus, 0)
-        safe = tipus.replace("+","_")                   # e.g. "Femella_Trofeu"
-        col_name = f"Adjudicats_Tipus{i}_{safe}" 
         assigned = 0
+        safe = tipus.replace('+','_')
+        col_name = f'Adjudicats_Tipus{i}_{safe}'
         while assigned < target:
-            # Calcula adjudicats acumulats global, no inclou per tipus
             df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
             min_acc = df['Adjudicats_acumulats'].min()
             candidates = df[df['Adjudicats_acumulats'] == min_acc].copy()
             candidates['rand'] = rng.random(size=len(candidates))
-            # Ordre segons prioritat només si no tenen adjudicats acumulats
             if min_acc == 0:
                 ordered = candidates.sort_values(by=['Prioritat','rand'],ascending=[True,True])
             else:
                 ordered = candidates.sort_values(by=['rand'])
             idx = ordered.index[0]
-            # Increment global i per tipus
             df.at[idx, 'Adjudicats'] += 1
             df.at[idx, col_name] += 1
             assigned += 1
-
-    # Nova columna de resultat acumulat per espècie
-    df['Nou_Resultat_sorteigs_mateixa_sps'] = (
-        df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
+    df['Nou_Resultat_sorteigs_mateixa_sps'] = df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
+    # Calcular nova prioritat i anys sense captura
+    df['nova_prioritat'] = df['Adjudicats'].apply(lambda x: 4 if x == 1 else 2)
+    df['nou_anys_sense_captura'] = df.apply(
+        lambda r: 0 if r['Adjudicats'] == 1 else r['anys_sense_captura'] + 1,
+        axis=1
     )
-    # Eliminar columna intermèdia
     if 'Adjudicats_acumulats' in df.columns:
         df.drop(columns=['Adjudicats_acumulats'], inplace=True)
     return df
