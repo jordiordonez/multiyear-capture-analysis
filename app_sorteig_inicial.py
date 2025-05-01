@@ -4,7 +4,6 @@ import tempfile
 import numpy as np
 import math
 
-# Funció per al sorteig amb colles (lògica existent)
 def assignar_isards_sorteig_csv(
     file_csv: str,
     total_captures: int,
@@ -119,82 +118,38 @@ def assignar_isards_sorteig_csv(
     df.drop(columns=['rand'], errors='ignore').to_csv(output_csv, index=False)
     return df
 
-# Nova funció per al sorteig individual (sense colles)
-d# Nova funció per al sorteig individual (sense colles)
-def assignar_captura_csv(df, config, tipus_captures, quantitats):
-    required_cols = {'ID', 'Modalitat', 'Prioritat', 'Colla_ID',
-     'anys_sense_captura','Resultat_sorteigs_mateixa_sps'}
-    if not required_cols.issubset(df.columns):
-        raise ValueError(f"Falten columnes obligatòries: {required_cols - set(df.columns)}")
-    rng = np.random.RandomState(None)
-    df = df.copy()
-    # Inicialitzar comptador d'adjudicacions si no existeix
-    if 'Adjudicats' not in df.columns:
-        df['Adjudicats'] = 0
-    # Iterar per cada tipus de captura en l'ordre triat
-    for tipus in tipus_captures:
-        n = quantitats.get(tipus, 0)
-        remaining = n
-        while remaining > 0:
-            # Calcular adjudicats acumulats
-            df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
-            # Trobar candidats amb mínim acumulat
-            min_acc = df['Adjudicats_acumulats'].min()
-            candidates = df[df['Adjudicats_acumulats'] == min_acc].copy()
-            # Trencar empats aleatòriament
-            candidates['rand'] = rng.random(size=len(candidates))
-            # Ordenació condicional: si no han estat mai adjudicats, importa la Prioritat
-            if min_acc == 0:
-                sorted_cands = candidates.sort_values(
-                    by=['Prioritat', 'rand'],
-                    ascending=[True, True]
-                )
-            else:
-                sorted_cands = candidates.sort_values(by=['rand'])
-            idx = sorted_cands.index[0]
-            # Assignar captura
-            df.at[idx, 'Adjudicats'] += 1
-            remaining -= 1
-    # Calcular nou resultat acumulat per següents sortejos
-    df['Nou_Resultat_sorteigs_mateixa_sps'] = (
-        df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
-    )
-    return df
+st.set_page_config(page_title="App Sorteig Captures Isard", page_icon="🦌", layout="centered")
 
-# Títol de la pàgina
-st.title("App Sorteig Pla de Caça")
+st.title("Sorteig de Captures d'Isard")
 
-# 1. Selecció inicial
-especie = st.selectbox("Selecciona l'espècie:", ['Isard', 'Cabirol', 'Mufló'])
-unidad = st.selectbox("Selecciona la Unitad de gestió:", [
-    'VC Enclar', 'VC Xixerella', 'VCR Ansó-Sorteny', 'VCR Ansó', 'VC Sorteny', 'VT Escaldes-Engordany', 'TCC'
-])
+# 1. Pujar fitxer
+uploaded_file = st.file_uploader("Carrega el fitxer CSV d'inscrits:", type=["csv"])
 
-# 2. Selecció de tipus de captura
-opciones = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
-seleccio = st.multiselect("Tipus de captura (tria múltiples):", opciones)
-# Si Indeterminat, anul·la la resta\if 'Indeterminat' in seleccio:
-    seleccio = ['Indeterminat']
-# Número d’ordre preservat per l'ordre seleccionat
-quantitats = {}
-for tipus in seleccio:
-    quantitats[tipus] = st.number_input(f"Nombre de captures per '{tipus}':", min_value=1, step=1)
+if uploaded_file is not None:
+    df_inscrits = pd.read_csv(uploaded_file, sep=';')
+    st.success("✅ Fitxer carregat correctament.")
+    st.dataframe(df_inscrits.head())
 
-# 3. Pujar CSV
-df_cacadors = st.file_uploader("Puja el CSV de sol·licitants", type=['csv'])
-if df_cacadors: df = pd.read_csv(df_cacadors, sep=';')
+    # 2. Número de captures
+    total_captures = st.number_input("Nombre total de captures disponibles:", min_value=1, step=1)
 
-config = {'especie': especie, 'unidad': unidad, 'tipus': seleccio, 'quantitats': quantitats}
+    # 3. Llavor opcional
+    seed = st.number_input("Llavor aleatòria (opcional):", value=None, step=1, format="%i")
 
-# 4. Cridar la lògica adequada\        
-if especie == 'Isard' and unidad == 'TCC':
-    result = assignar_isards_sorteig_csv(df, config)
-else:
-    result = assignar_captura_csv(df, config, seleccio, quantitats)
-    # Missatge informatiu
-    st.info('Per a l\'any següent, caldrà assignar prioritat 1 als caçadors que hagin abatut una femella.')
+    if st.button("🎯 Executar Sorteig"):
+        # Guardar fitxer temporalment
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp_input:
+            df_inscrits.to_csv(tmp_input.name, sep=';', index=False)
+            output_df = assignar_isards_sorteig_csv(tmp_input.name, int(total_captures), seed=int(seed) if seed else None)
 
-# Mostrar resultats\        
-st.dataframe(result)
-# Botó per descarregar
-st.download_button('Descarregar resultat CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
+        st.success("✅ Sorteig realitzat!")
+        st.dataframe(output_df.head())
+
+        # Baixar resultat
+        csv = output_df.to_csv(index=False, sep=';').encode('utf-8')
+        st.download_button(
+            label="💾 Descarrega el fitxer de resultats",
+            data=csv,
+            file_name='resultats_sorteig.csv',
+            mime='text/csv'
+        )
