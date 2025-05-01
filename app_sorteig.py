@@ -68,7 +68,7 @@ def assignar_isards_sorteig_csv(df: pd.DataFrame, total_captures: int, seed: int
 
 # Funció per al sorteig individual (sense colles)
 def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dict, seed: int = None) -> pd.DataFrame:
-    required = {'ID', 'Modalitat', 'Prioritat', 'Colla_ID', 'anys_sense_captura', 'Resultat_sorteigs_mateixa_sps'}
+    required = {'ID', 'Prioritat', 'anys_sense_captura', 'Resultat_sorteigs_mateixa_sps'}
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
@@ -141,7 +141,8 @@ else:
         )
         st.session_state['configs'][idx]['selections'] = sel
         st.session_state['configs'][idx]['qty'] = qty
-        # Preparar llistes\        val = sel[0] if len(sel)==1 else '+'.join(sel)
+        # Preparar llistes\        
+        val = sel[0] if len(sel)==1 else '+'.join(sel)
         tipus_captures.append(val)
         quantitats[val] = qty
 
