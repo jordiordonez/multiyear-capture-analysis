@@ -104,10 +104,6 @@ unidad = st.selectbox(
     ['VC Enclar', 'VC Xixerella', 'VCR Ansó-Sorteny', 'VCR Ansó', 'VC Sorteny', 'VT Escaldes-Engordany', 'TCC']
 )
 
-# 2. Semilla opcional
-seed = st.number_input("Llavor opcional (0 = aleatori):", min_value=0, step=1, format="%d")
-seed = None if seed == 0 else seed
-
 # 3. Carrega CSV i vista prèvia
 df = None
 file = st.file_uploader("CSV sol·licitants", type='csv')
@@ -142,7 +138,13 @@ for idx, conf in enumerate(st.session_state['configs']):
     )
     st.session_state['configs'][idx]['qty'] = qty
 
-# 5. Executar sorteig\if st.button("Executar sorteig"):
+# 2. Semilla opcional
+seed = st.number_input("Llavor opcional (0 = aleatori):", min_value=0, step=1, format="%d")
+seed = None if seed == 0 else seed
+
+# 5. Executar sorteig\
+
+if st.button("Executar sorteig"):
     if df is None:
         st.warning("Cal pujar un CSV abans d'executar el sorteig.")
     else:
