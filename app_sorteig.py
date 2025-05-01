@@ -76,7 +76,8 @@ def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dic
     if 'Adjudicats' not in df.columns:
         df['Adjudicats'] = 0
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    # Creem columnes individuals per cada Tipus\    for i, tipus in enumerate(tipus_captures, start=1):
+    # Creem columnes individuals per cada Tipus\    
+    for i, tipus in enumerate(tipus_captures, start=1):
         safe = tipus.replace('+','_')
         col_name = f'Adjudicats_Tipus{i}_{safe}'
         df[col_name] = 0
