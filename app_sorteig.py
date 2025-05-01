@@ -95,6 +95,7 @@ def assignar_captura_csv(
     for i, tipus in enumerate(tipus_captures, start=1):
         target = quantitats.get(tipus, 0)
         col_name = f'Adjudicats_Tipus_{i}'
+        assigned = 0
         while assigned < target:
             # Calcula adjudicats acumulats global, no inclou per tipus
             df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
