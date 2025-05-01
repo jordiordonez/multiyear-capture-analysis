@@ -93,6 +93,8 @@ def assignar_captura_csv(
 
     # Assignació per tipus en ordre
     for tipus in enumerate(tipus_captures, start=1):
+        print(tipus)
+        print(quantitats)
         target = quantitats.get(tipus, 0)
         assigned = 0
         col_name = f'Adjudicats_Tipus_{tipus}'
