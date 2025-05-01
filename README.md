@@ -110,19 +110,45 @@ It simulates:
 **Key Purpose:**
 To evaluate whether collaborative strategies can systematically improve a hunter’s odds of securing captures in a fair allocation system.
 
-# 🖥️ App Sorteig.
+# 🖥️ App Sorteig
 
-This is a separate Streamlit web application designed for real-world allocation of captures based on hunter registrations.
-It offers a simple and intuitive interface to upload a real CSV file of hunters and immediately perform the lottery allocation (sorteig).
-It allows users to:
-* Upload a CSV file of registered hunters.
-Specify:
-* The total number of available captures.
-* An optional random seed for reproducibility.
-* Execute the complete allocation algorithm.
-* Download a new CSV file containing:
-    * Allocation results (adjudicats column).
-    * Updated priorities and history (nova_prioritat, nou_anys_sense_captura).
+This is a standalone **Streamlit** application for real-world allocation of captures based on hunter registrations.
+
+## Main Features
+
+1. **Species & Management Unit Selection**  
+   - Choose an **Espècie** (`Isard`, `Cabirol`, `Mufló`).  
+   - Choose a **Unitat de gestió** (e.g. `TCC`, `VC Enclar`, etc.).
+
+2. **Upload Hunters CSV**  
+   - The CSV must include at least these columns:  
+     `ID`, `Prioritat`, `anys_sense_captura`, `Resultat_sorteigs_mateixa_sps`.
+
+3. **Capture Configuration**  
+   - **For Isard + TCC**: enter the **total number of captures**.  
+   - **For all other combinations**: add one or more **Capture Types** (e.g. `Femella`, `Mascle`, `Adult`, or combinations like `Femella+Trofeu`) and specify the **number of captures** for each.
+
+4. **Optional Random Seed**  
+   - Provide a seed (`Llavor opcional`) to reproduce the same draw.
+
+5. **Execute the Draw**  
+   - Click **“Executar sorteig”** to run the allocation algorithm.
+
+6. **Results & Download**  
+   - The table displays:  
+     - **Global** `adjudicats` column (total captures assigned per hunter)  
+     - **Per-type** columns (`Adjudicats_Tipus1_<values>`, `Adjudicats_Tipus2_<values>`, …)  
+     - Updated `nova_prioritat` and `nou_anys_sense_captura`  
+   - Download a new CSV with these results.
+
+---
+
+## Algorithm Summary
+
+- **Ordering**: first by `Prioritat`, then by total past captures (`adjudicats + Resultat_sorteigs_mateixa_sps`).
+- **Sequential Assignment**: for each Capture Type in the order defined, assign exactly the specified number of slots.
+- **Tie-breaking**: when multiple hunters share the same allocation count, ties are broken randomly (but reproducibly if a seed is set).
+- **Priority Update**: hunters who harvest a female in the current draw retain top priority for the following season.  
 
 Key Purpose:
 Transforms the simulated logic into a usable web application for practical management of real capture processes.
