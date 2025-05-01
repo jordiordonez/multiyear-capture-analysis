@@ -120,12 +120,29 @@ st.title("App Sorteig Pla de Caça")
 
 # 1. Selecció inicial
 especie = st.selectbox("Espècie:", ['Isard','Cabirol','Mufló'])
-unidad = st.selectbox("Unitat de gestió:",[
-    'VC Enclar','VC Xixerella','VCR Ansó-Sorteny','VCR Ansó',
-    'VC Sorteny','VT Escaldes-Engordany','TCC'
-])
+unidad = st.selectbox("Unitat de gestió:", ['VC Enclar','VC Xixerella','VCR Ansó-Sorteny','VCR Ansó','VC Sorteny','VT Escaldes-Engordany','TCC'])
 
-# 2. Carrega CSV i vista prèvia
+# 2. Opció de semilla
+seed = st.number_input("Semilla opcional (deixa buit per aleatori):", min_value=0, step=1, format="%d")
+seed = None if seed == 0 else seed
+
+# 3. Configuració captures
+if especie == 'Isard' and unidad == 'TCC':
+    total_cap = st.number_input("Nombre total de captures:", min_value=1, step=1)
+    tipus_captures = None
+    quantitats = None
+else:
+    simple_opts = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
+    simples = st.multiselect("Tipus simples:", simple_opts)
+    compostos_input = st.text_area("Tipus compostos (un per línia, ex: Trofeu+Mascle)", height=100)
+    compostos = [s.strip() for s in compostos_input.splitlines() if s.strip()]
+    if 'Indeterminat' in simples:
+        tipus_captures = ['Indeterminat']
+    else:
+        tipus_captures = simples + compostos
+    quantitats = {t: st.number_input(f"Nº captures {t}:", min_value=1, step=1) for t in tipus_captures}
+
+# 4. Pujar CSV i previsualització
 df = None
 file = st.file_uploader("CSV sol·licitants", type='csv')
 if file:
@@ -133,45 +150,21 @@ if file:
     st.subheader("Previsualització de sol·licitants")
     st.dataframe(df)
 
-# 3. Opcions de semilla
-seed = st.number_input("Llavior opcional: (Nombre enter)", min_value=0, step=1, format="%d")
-if seed == 0:
-    seed = None
-
-# 4. Configuració captures
-tipus_captures = []
-quantitats = {}
-if df is not None:
+# 5. Botó Execució
+executar = st.button("Executar sorteig")
+if executar and df is not None:
     if especie == 'Isard' and unidad == 'TCC':
-        total_cap = st.number_input("Nombre total de captures:", min_value=1, step=1)
+        result = assignar_isards_sorteig_csv(df, total_cap, seed)
     else:
-        simple_opts = ['Femella','Mascle','Adult','Juvenil','Trofeu','Selectiu','Indeterminat']
-        simples = st.multiselect("Tipus simples:", simple_opts)
-        compostos_input = st.text_area(
-            "Tipus compostos (un per línia, ex: Trofeu+Mascle)", height=100
-        )
-        compostos = [s.strip() for s in compostos_input.splitlines() if s.strip()]
-        if 'Indeterminat' in simples:
-            tipus_captures = ['Indeterminat']
-        else:
-            tipus_captures = simples + compostos
-        for t in tipus_captures:
-            quantitats[t] = st.number_input(f"Nº captures {t}:", min_value=1, step=1)
-
-# 5. Botó d'execució
-if df is not None and ((especie=='Isard' and unidad=='TCC' and 'total_cap' in locals()) or quantitats):
-    if st.button("Executar sorteig"):
-        if especie=='Isard' and unidad=='TCC':
-            result = assignar_isards_sorteig_csv(df, total_cap, seed)
-        else:
-            result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
-            st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
-        st.subheader("Resultats del sorteig")
-        st.dataframe(result)
-        st.download_button(
-            'Descarregar resultat CSV', result.to_csv(index=False),
-            file_name=f"sorteig_{especie}_{unidad}.csv"
-        )
-else:
-    if file:
-        st.warning("Completa la configuració de captures abans d'executar el sorteig.")
+        result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
+        st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
+    st.subheader("Resultats del sorteig")
+    st.dataframe(result)
+    st.download_button('Descarregar CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
+elif not executar and df is None:
+    st.info("Puja un CSV per iniciar el sorteig.")
+elif executar and df is None:
+    st.warning("Cal pujar un CSV abans d'executar el sorteig.")
+elif executar:
+    if especie != 'Isard' or unidad != 'TCC':
+        st.warning("Completa la configuració de tipus i quantitats abans d'executar.")
