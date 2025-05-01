@@ -182,7 +182,7 @@ if df_cacadors:
 
 config = {'especie': especie, 'unidad': unidad, 'tipus': seleccio, 'quantitats': quantitats}
 
-# 4. Cridar la lògica adequada\        
+# 4. Cridar la lògica adequada        
 if especie == 'Isard' and unidad == 'TCC':
     result = assignar_isards_sorteig_csv(df, config)
 else:
