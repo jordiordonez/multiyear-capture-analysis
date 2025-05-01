@@ -173,7 +173,8 @@ unidad = st.selectbox("Selecciona la Unitad de gestió:", [
 # 2. Selecció de tipus de captura
 opciones = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
 seleccio = st.multiselect("Tipus de captura (tria múltiples):", opciones)
-# Si Indeterminat, anul·la la resta\if 'Indeterminat' in seleccio:
+# Si Indeterminat, anul·la la resta\
+if 'Indeterminat' in seleccio:
     seleccio = ['Indeterminat']
 # Número d’ordre preservat per l'ordre seleccionat
 quantitats = {}
