@@ -182,8 +182,9 @@ for tipus in seleccio:
 
 # 3. Pujar CSV
 df_cacadors = st.file_uploader("Puja el CSV de sol·licitants", type=['csv'])
-df = pd.read_csv(df_cacadors, sep=';')
-    
+if df_cacadors: 
+    df = pd.read_csv(df_cacadors, sep=';')
+
 config = {'especie': especie, 'unidad': unidad, 'tipus': seleccio, 'quantitats': quantitats}
 
 # 4. Cridar la lògica adequada\        
