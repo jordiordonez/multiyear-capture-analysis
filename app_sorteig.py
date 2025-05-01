@@ -114,10 +114,9 @@ if file:
 
 # 4. Configuració de Tipus de captura dinàmica
 options = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
-# Només mostrant si no Isard+TCC
 if not (especie == 'Isard' and unidad == 'TCC'):
     if 'configs' not in st.session_state:
-        st.session_state['configs'] = []
+        st.session_state['configs'] = [{'selections': [], 'qty': 1}]
     if st.button("Afegeix Tipus"):
         st.session_state['configs'].append({'selections': [], 'qty': 1})
     for idx, conf in enumerate(st.session_state['configs']):
@@ -129,13 +128,13 @@ if not (especie == 'Isard' and unidad == 'TCC'):
         )
         if 'Indeterminat' in sel:
             sel = ['Indeterminat']
-        st.session_state['configs'][idx]['selections'] = sel
         qty = st.number_input(
             f"Nº captures per Tipus {idx+1}:",
             min_value=1,
             step=1,
             key=f"qty_{idx}"
         )
+        st.session_state['configs'][idx]['selections'] = sel
         st.session_state['configs'][idx]['qty'] = qty
 
 # 2. Semilla opcional
