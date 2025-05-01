@@ -98,7 +98,8 @@ def assignar_captura_csv(
         df['Adjudicats'] = 0
 
     rng = np.random.RandomState(None)
-    # Iterar en ordre de tipus\    for tipus in tipus_captures:
+    # Iterar en ordre de tipus\    
+    for tipus in tipus_captures:
         target = quantitats.get(tipus, 0)
         assigned = 0
         while assigned < target:
