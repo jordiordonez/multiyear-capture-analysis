@@ -120,7 +120,6 @@ def assignar_isards_sorteig_csv(
     return df
 
 # Nova funció per al sorteig individual (sense colles)
-d# Nova funció per al sorteig individual (sense colles)
 def assignar_captura_csv(df, config, tipus_captures, quantitats):
     required_cols = {'ID', 'Modalitat', 'Prioritat', 'Colla_ID',
      'anys_sense_captura','Resultat_sorteigs_mateixa_sps'}
