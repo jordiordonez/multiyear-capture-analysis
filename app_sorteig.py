@@ -179,4 +179,6 @@ else:
     if df is None:
         st.info("Puja un CSV per iniciar el sorteig.")
     else:
-        st.info("Configura al menys un Tipus abans d'executar.")
+        if not (especie == 'Isard' and unidad == 'TCC'):
+            if st.session_state.get('configs') is None:
+                st.info("Configura els Tipus i quantitats abans d'executar.")
