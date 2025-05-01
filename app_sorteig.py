@@ -118,7 +118,7 @@ options = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indet
 tipus_captures = []
 quantitats = {}
 if especie == 'Isard' and unidad == 'TCC':
-    total_cap = st.number_input("Quantitat captures total:", min_value=1, step=1)
+    total_cap = st.number_input("Quantitat Captures:", min_value=1, step=1)
 else:
     if 'configs' not in st.session_state:
         st.session_state['configs'] = [{'selections': [], 'qty': 1}]
@@ -157,7 +157,9 @@ if st.button("Executar sorteig"):
         tipus_captures = []
         quantitats = {}
         if especie == 'Isard' and unidad == 'TCC':
-            total_cap = sum(conf['qty'] for conf in st.session_state.get('configs', []))
+            if total_cap is None:
+                st.warning("Cal especificar el nombre de captures.")
+                st.stop()
             try:
                 result = assignar_isards_sorteig_csv(df, total_cap, seed)
             except ValueError as e:
