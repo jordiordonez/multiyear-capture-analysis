@@ -59,7 +59,7 @@ def assignar_isards_sorteig_csv(df: pd.DataFrame, total_captures: int, seed: int
         idxs = sorted_g.index[:take]
         df.loc[idxs, 'adjudicats'] += 1
         rem -= take
-    df['nova_prioritat'] = df['adjudicats'].apply(lambda x: 4 if x == 1 else 2)
+    df['nova_prioritat'] = df['adjudicats'].apply(lambda x: 4 if x > 1 else 2)
     df['nou_anys_sense_captura'] = df.apply(
         lambda r: 0 if r['adjudicats'] == 1 else r['anys_sense_captura'] + 1,
         axis=1
@@ -102,7 +102,7 @@ def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dic
             assigned += 1
     df['Nou_Resultat_sorteigs_mateixa_sps'] = df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
     # Calcular nova prioritat i anys sense captura
-    df['nova_prioritat'] = df['Adjudicats'].apply(lambda x: 4 if x == 1 else 2)
+    df['nova_prioritat'] = df['Adjudicats'].apply(lambda x: 4 if x > 1 else 2)
     df['nou_anys_sense_captura'] = df.apply(
         lambda r: 0 if r['Adjudicats'] == 1 else r['anys_sense_captura'] + 1,
         axis=1
