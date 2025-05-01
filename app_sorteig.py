@@ -119,7 +119,10 @@ def assignar_captura_csv(
     df['Nou_Resultat_sorteigs_mateixa_sps'] = (
         df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
     )
-    return df[-'Adjudicats_acumulats']
+    # Eliminar columna intermèdia
+    if 'Adjudicats_acumulats' in df.columns:
+        df.drop(columns=['Adjudicats_acumulats'], inplace=True)
+    return df
 
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
