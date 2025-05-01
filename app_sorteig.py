@@ -119,8 +119,7 @@ def assignar_captura_csv(
     df['Nou_Resultat_sorteigs_mateixa_sps'] = (
         df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
     )
-    return df
-
+    return df[-'Adjudicats_acumulats']
 
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
