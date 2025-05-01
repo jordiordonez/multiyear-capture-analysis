@@ -98,8 +98,7 @@ def assignar_captura_csv(
         df['Adjudicats'] = 0
 
     rng = np.random.RandomState(None)
-    # Iterar en ordre de tipus\    
-    for tipus in tipus_captures:
+    # Iterar en ordre de tipus\    for tipus in tipus_captures:
         target = quantitats.get(tipus, 0)
         assigned = 0
         while assigned < target:
@@ -154,42 +153,6 @@ if file:
     st.download_button('Descarregar CSV', result.to_csv(index=False), file_name=f"sorteig_{especie}_{unidad}.csv")
 else:
     st.info("Puja un CSV per iniciar el sorteig.")
-
-
-# Títol de la pàgina
-st.title("App Sorteig Pla de Caça")
-
-# 1. Selecció inicial
-especie = st.selectbox("Selecciona l'espècie:", ['Isard', 'Cabirol', 'Mufló'])
-unidad = st.selectbox("Selecciona la Unitad de gestió:", [
-    'VC Enclar', 'VC Xixerella', 'VCR Ansó-Sorteny', 'VCR Ansó', 'VC Sorteny', 'VT Escaldes-Engordany', 'TCC'
-])
-
-# 2. Selecció de tipus de captura
-opciones = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
-seleccio = st.multiselect("Tipus de captura (tria múltiples):", opciones)
-# Si Indeterminat, anul·la la resta\
-if 'Indeterminat' in seleccio:
-    seleccio = ['Indeterminat']
-# Número d’ordre preservat per l'ordre seleccionat
-quantitats = {}
-for tipus in seleccio:
-    quantitats[tipus] = st.number_input(f"Nombre de captures per '{tipus}':", min_value=1, step=1)
-
-# 3. Pujar CSV
-df_cacadors = st.file_uploader("Puja el CSV de sol·licitants", type=['csv'])
-if df_cacadors: 
-    df = pd.read_csv(df_cacadors, sep=';')
-
-config = {'especie': especie, 'unidad': unidad, 'tipus': seleccio, 'quantitats': quantitats}
-
-# 4. Cridar la lògica adequada        
-if especie == 'Isard' and unidad == 'TCC':
-    result = assignar_isards_sorteig_csv(df, config)
-else:
-    result = assignar_captura_csv(df, config, seleccio, quantitats)
-    # Missatge informatiu
-    st.info('Per a l\'any següent, caldrà assignar prioritat 1 als caçadors que hagin abatut una femella.')
 
 # Mostrar resultats\        
 st.dataframe(result)
