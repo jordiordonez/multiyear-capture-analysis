@@ -86,7 +86,7 @@ def assignar_captura_csv(
 
     # Creem columnes individuals per cada Tipus
     for i, tipus in enumerate(tipus_captures, start=1):
-        col_name = f'Adjudicats_Tipus{i}'
+        col_name = f'Adjudicats_Tipus_{i}'
         df[col_name] = 0
 
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
@@ -118,6 +118,8 @@ def assignar_captura_csv(
         df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
     )
     return df
+
+
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 
