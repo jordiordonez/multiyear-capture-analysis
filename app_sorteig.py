@@ -90,10 +90,15 @@ def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dic
         while assigned < target:
             df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
             min_acc = df['Adjudicats_acumulats'].min()
+            # Filtrar candidats amb captures assignades mínimes ja que són prioritaris
             candidates = df[df['Adjudicats_acumulats'] == min_acc].copy()
             candidates['rand'] = rng.random(size=len(candidates))
+            # Mentre hi han candidts sense captures assignades en cap dels sortejos 
+            # se'ls assigna per prioritat i aleatoriament després.
             if min_acc == 0:
                 ordered = candidates.sort_values(by=['Prioritat','rand'],ascending=[True,True])
+            # Si tots tenen com a mínim una captura assignada, 
+            # s'assigna aleatoriament, tots estan a la mateixa prioritat.
             else:
                 ordered = candidates.sort_values(by=['rand'])
             idx = ordered.index[0]
