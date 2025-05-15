@@ -172,22 +172,21 @@ st.markdown("""
     💡 Pots descarregar exemples de fitxers aquí:
 
     """)
+with open("exemple1.csv", "rb") as f1:
+    st.download_button(
+        label="📥 Exemple Isard TCC (exemple1.csv)",
+        data=f1,
+        file_name="exemple1.csv",
+        mime="text/csv"
+    )
 
-    with open("exemple1.csv", "rb") as f1:
-        st.download_button(
-            label="📥 Exemple Isard TCC (exemple1.csv)",
-            data=f1,
-            file_name="exemple1.csv",
-            mime="text/csv"
-        )
-
-    with open("exemple2.csv", "rb") as f2:
-        st.download_button(
-            label="📥 Exemple altres espècies/unitats (exemple2.csv)",
-            data=f2,
-            file_name="exemple2.csv",
-            mime="text/csv"
-        )
+with open("exemple2.csv", "rb") as f2:
+    st.download_button(
+        label="📥 Exemple altres espècies/unitats (exemple2.csv)",
+        data=f2,
+        file_name="exemple2.csv",
+        mime="text/csv"
+    )
 
 
 # 1. Selecció inicial
