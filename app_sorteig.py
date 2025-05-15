@@ -132,7 +132,7 @@ st.markdown("""
     5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
     """)
 
-    st.markdown("""
+st.markdown("""
     ## 📄 Instruccions – Format dels fitxers CSV
 
     Segons l'espècie i la unitat de gestió seleccionades, el format del fitxer d'entrada canvia lleugerament.
