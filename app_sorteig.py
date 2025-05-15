@@ -132,6 +132,64 @@ st.markdown("""
     5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
     """)
 
+    st.markdown("""
+    ## 📄 Instruccions – Format dels fitxers CSV
+
+    Segons l'espècie i la unitat de gestió seleccionades, el format del fitxer d'entrada canvia lleugerament.
+
+    ---
+
+    ### 🏔️ Cas `Isard` amb `TCC`
+
+    El fitxer CSV ha de contenir les següents columnes:
+
+    | Columna                         | Descripció                                                                 |
+    |----------------------------------|----------------------------------------------------------------------------|
+    | `ID`                            | Identificador únic del caçador                                             |
+    | `Prioritat`                     | Prioritat actual del caçador (nombre enter: 1 = màxima)                   |
+    | `anys_sense_captura`           | Anys consecutius sense captura (nombre enter)                              |
+    | `Resultat_sorteigs_mateixa_sps`| Captures acumulades per la mateixa espècie en anys anteriors (nombre enter) |
+
+    ---
+
+    ### 🦌 Altres espècies / unitats de gestió
+
+    A més de les columnes anteriors, s’ha de preveure una columna per cada **tipus de captura disponible**, amb el nombre de captures que es vol assignar.
+
+    La configuració dels tipus de captura es fa a l’apartat següent de l’aplicació. Exemple:
+
+    | Columna                         | Exemple de valor                          |
+    |----------------------------------|--------------------------------------------|
+    | `ID`                            | HNTR_048                                   |
+    | `Prioritat`                     | 2                                          |
+    | `anys_sense_captura`           | 1                                          |
+    | `Resultat_sorteigs_mateixa_sps`| 0                                          |
+    | `Femella`                      | 1                                          |
+    | `Mascle+Trofeu`                | 0                                          |
+
+    ---
+
+    💡 Pots descarregar exemples de fitxers aquí:
+
+    """)
+
+    with open("exemple1.csv", "rb") as f1:
+        st.download_button(
+            label="📥 Exemple Isard TCC (exemple1.csv)",
+            data=f1,
+            file_name="exemple1.csv",
+            mime="text/csv"
+        )
+
+    with open("exemple2.csv", "rb") as f2:
+        st.download_button(
+            label="📥 Exemple altres espècies/unitats (exemple2.csv)",
+            data=f2,
+            file_name="exemple2.csv",
+            mime="text/csv"
+        )
+
+
 # 1. Selecció inicial
 especie = st.selectbox("Espècie:", ['Isard', 'Cabirol', 'Mufló'])
 unidad = st.selectbox(
