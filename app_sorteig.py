@@ -3,123 +3,140 @@ import pandas as pd
 import numpy as np
 import math
 
+
 # Funció per al sorteig amb colles (lògica existent)
-def assignar_isards_sorteig_csv(df: pd.DataFrame, total_captures: int, seed: int = None) -> pd.DataFrame:
+def assignar_isards_sorteig_csv(
+    df: pd.DataFrame, total_captures: int, seed: int = None
+) -> pd.DataFrame:
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    required = {'ID', 'Modalitat', 'Prioritat', 'Colla_ID', 'anys_sense_captura'}
+    required = {"ID", "Modalitat", "Prioritat", "Colla_ID", "anys_sense_captura"}
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
     df = df.copy()
-    df['adjudicats'] = 0
-    df_colla = df[df['Modalitat'] == 'A']
-    df_indiv = df[df['Modalitat'] == 'B']
+    df["adjudicats"] = 0
+    df_colla = df[df["Modalitat"] == "A"]
+    df_indiv = df[df["Modalitat"] == "B"]
     total_applicants = len(df_colla) + len(df_indiv)
     ratio = math.ceil(total_applicants / total_captures)
     n_indiv = round(total_captures * len(df_indiv) / total_applicants)
     n_colla = total_captures - n_indiv
     # Assign dins colles
-    colles = df_colla.groupby('Colla_ID').size().reset_index(name='caçadors')
-    colles['assignats'] = (colles['caçadors'] // ratio).astype(int)
-    leftover = n_colla - colles['assignats'].sum()
+    colles = df_colla.groupby("Colla_ID").size().reset_index(name="caçadors")
+    colles["assignats"] = (colles["caçadors"] // ratio).astype(int)
+    leftover = n_colla - colles["assignats"].sum()
     for _ in range(leftover):
-        colles['rati'] = colles['assignats'] / colles['caçadors']
-        min_rati = colles['rati'].min()
-        cand = colles[np.isclose(colles['rati'], min_rati, atol=1e-6)]
+        colles["rati"] = colles["assignats"] / colles["caçadors"]
+        min_rati = colles["rati"].min()
+        cand = colles[np.isclose(colles["rati"], min_rati, atol=1e-6)]
         sel = cand.sample(1, random_state=rng)
-        cid = sel['Colla_ID'].iloc[0]
-        colles.loc[colles['Colla_ID'] == cid, 'assignats'] += 1
+        cid = sel["Colla_ID"].iloc[0]
+        colles.loc[colles["Colla_ID"] == cid, "assignats"] += 1
     for _, row in colles.iterrows():
-        cid, to_assign = row['Colla_ID'], int(row['assignats'])
+        cid, to_assign = row["Colla_ID"], int(row["assignats"])
         while to_assign > 0:
-            sub = df[(df['Modalitat'] == 'A') & (df['Colla_ID'] == cid)]
-            min_adj = sub['adjudicats'].min()
-            group = sub[sub['adjudicats'] == min_adj].copy()
-            group['rand'] = rng.random(len(group))
+            sub = df[(df["Modalitat"] == "A") & (df["Colla_ID"] == cid)]
+            min_adj = sub["adjudicats"].min()
+            group = sub[sub["adjudicats"] == min_adj].copy()
+            group["rand"] = rng.random(len(group))
             sorted_g = group.sort_values(
-                by=['Prioritat', 'anys_sense_captura', 'rand'],
-                ascending=[True, False, True]
+                by=["Prioritat", "anys_sense_captura", "rand"],
+                ascending=[True, False, True],
             )
             take = min(to_assign, len(sorted_g))
             idxs = sorted_g.index[:take]
-            df.loc[idxs, 'adjudicats'] += 1
+            df.loc[idxs, "adjudicats"] += 1
             to_assign -= take
     # Assign individus B
     rem = n_indiv
     while rem > 0:
-        sub = df[df['Modalitat'] == 'B']
-        min_adj = sub['adjudicats'].min()
-        group = sub[sub['adjudicats'] == min_adj].copy()
-        group['rand'] = rng.random(len(group))
+        sub = df[df["Modalitat"] == "B"]
+        min_adj = sub["adjudicats"].min()
+        group = sub[sub["adjudicats"] == min_adj].copy()
+        group["rand"] = rng.random(len(group))
         sorted_g = group.sort_values(
-            by=['Prioritat', 'anys_sense_captura', 'rand'],
-            ascending=[True, False, True]
+            by=["Prioritat", "anys_sense_captura", "rand"],
+            ascending=[True, False, True],
         )
         take = min(rem, len(sorted_g))
         idxs = sorted_g.index[:take]
-        df.loc[idxs, 'adjudicats'] += 1
+        df.loc[idxs, "adjudicats"] += 1
         rem -= take
-    df['nova_prioritat'] = df['adjudicats'].apply(lambda x: 4 if x > 1 else 2)
-    df['nou_anys_sense_captura'] = df.apply(
-        lambda r: 0 if r['adjudicats'] == 1 else r['anys_sense_captura'] + 1,
-        axis=1
+    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nou_anys_sense_captura"] = df.apply(
+        lambda r: 0 if r["adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
     )
     return df
 
+
 # Funció per al sorteig individual (sense colles)
-def assignar_captura_csv(df: pd.DataFrame, tipus_captures: list, quantitats: dict, seed: int = None) -> pd.DataFrame:
-    required = {'ID', 'Prioritat', 'anys_sense_captura', 'Resultat_sorteigs_mateixa_sps'}
+def assignar_captura_csv(
+    df: pd.DataFrame, tipus_captures: list, quantitats: dict, seed: int = None
+) -> pd.DataFrame:
+    required = {
+        "ID",
+        "Prioritat",
+        "anys_sense_captura",
+        "Resultat_sorteigs_mateixa_sps",
+    }
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
     df = df.copy()
-    if 'Adjudicats' not in df.columns:
-        df['Adjudicats'] = 0
+    if "Adjudicats" not in df.columns:
+        df["Adjudicats"] = 0
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    # Creem columnes individuals per cada Tipus\    
+    # Creem columnes individuals per cada Tipus\
     for i, tipus in enumerate(tipus_captures, start=1):
-        safe = tipus.replace('+','_')
-        col_name = f'Adjudicats_Tipus{i}_{safe}'
+        safe = tipus.replace("+", "_")
+        col_name = f"Adjudicats_Tipus{i}_{safe}"
         df[col_name] = 0
     # Assignació per tipus en ordre
     for i, tipus in enumerate(tipus_captures, start=1):
         target = quantitats.get(tipus, 0)
         assigned = 0
-        safe = tipus.replace('+','_')
-        col_name = f'Adjudicats_Tipus{i}_{safe}'
+        safe = tipus.replace("+", "_")
+        col_name = f"Adjudicats_Tipus{i}_{safe}"
         while assigned < target:
-            df['Adjudicats_acumulats'] = df['Adjudicats'] + df['Resultat_sorteigs_mateixa_sps']
-            min_acc = df['Adjudicats_acumulats'].min()
+            df["Adjudicats_acumulats"] = (
+                df["Adjudicats"] + df["Resultat_sorteigs_mateixa_sps"]
+            )
+            min_acc = df["Adjudicats_acumulats"].min()
             # Filtrar candidats amb captures assignades mínimes ja que són prioritaris
-            candidates = df[df['Adjudicats_acumulats'] == min_acc].copy()
-            candidates['rand'] = rng.random(size=len(candidates))
-            # Mentre hi han candidts sense captures assignades en cap dels sortejos 
+            candidates = df[df["Adjudicats_acumulats"] == min_acc].copy()
+            candidates["rand"] = rng.random(size=len(candidates))
+            # Mentre hi han candidts sense captures assignades en cap dels sortejos
             # se'ls assigna per prioritat i aleatoriament després.
             if min_acc == 0:
-                ordered = candidates.sort_values(by=['Prioritat','rand'],ascending=[True,True])
-            # Si tots tenen com a mínim una captura assignada, 
+                ordered = candidates.sort_values(
+                    by=["Prioritat", "rand"], ascending=[True, True]
+                )
+            # Si tots tenen com a mínim una captura assignada,
             # s'assigna aleatoriament, tots estan a la mateixa prioritat.
             else:
-                ordered = candidates.sort_values(by=['rand'])
+                ordered = candidates.sort_values(by=["rand"])
             idx = ordered.index[0]
-            df.at[idx, 'Adjudicats'] += 1
+            df.at[idx, "Adjudicats"] += 1
             df.at[idx, col_name] += 1
             assigned += 1
-    df['Nou_Resultat_sorteigs_mateixa_sps'] = df['Resultat_sorteigs_mateixa_sps'] + df['Adjudicats']
-    # Calcular nova prioritat i anys sense captura
-    df['nova_prioritat'] = df['Adjudicats'].apply(lambda x: 4 if x > 1 else 2)
-    df['nou_anys_sense_captura'] = df.apply(
-        lambda r: 0 if r['Adjudicats'] == 1 else r['anys_sense_captura'] + 1,
-        axis=1
+    df["Nou_Resultat_sorteigs_mateixa_sps"] = (
+        df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
-    if 'Adjudicats_acumulats' in df.columns:
-        df.drop(columns=['Adjudicats_acumulats'], inplace=True)
+    # Calcular nova prioritat i anys sense captura
+    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nou_anys_sense_captura"] = df.apply(
+        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
+    )
+    if "Adjudicats_acumulats" in df.columns:
+        df.drop(columns=["Adjudicats_acumulats"], inplace=True)
     return df
+
 
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 # Instruccions d'ús en català
-st.markdown("""
+st.markdown(
+    """
     ## Instruccions d'ús:
 
     1. Seleccioneu l'espècie i la unitat de gestió.
@@ -130,9 +147,11 @@ st.markdown("""
         - indiqueu el nombre de captures.
     4. Opcional: introduïu una llavor per a reproduir el mateix sorteig.
     5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
-    """)
+    """
+)
 
-st.markdown("""
+st.markdown(
+    """
     ## 📄 Instruccions – Format dels fitxers CSV
 
     Segons l'espècie i la unitat de gestió seleccionades, el format del fitxer d'entrada canvia lleugerament.
@@ -145,7 +164,9 @@ st.markdown("""
 
     | Columna                         | Descripció                                                                 |
     |----------------------------------|----------------------------------------------------------------------------|
-    | `ID`                            | Identificador únic del caçador                                             |
+    | `ID`                            | Identificador únic del caçador                                   |
+    | `Modalitat`                     | Modalitat d'inscripció (`A` = colla, `B` = individual)            |
+    | `Colla_ID`                      | Identificador de la colla                                       |
     | `Prioritat`                     | Prioritat actual del caçador (nombre enter: 1 = màxima)                   |
     | `anys_sense_captura`           | Anys consecutius sense captura (nombre enter)                              |
     | `Resultat_sorteigs_mateixa_sps`| Captures acumulades per la mateixa espècie en anys anteriors (nombre enter) |
@@ -171,13 +192,14 @@ st.markdown("""
 
     💡 Pots descarregar exemples de fitxers aquí:
 
-    """)
+    """
+)
 with open("exemple1.csv", "rb") as f1:
     st.download_button(
         label="📥 Exemple Isard TCC (exemple1.csv)",
         data=f1,
         file_name="exemple1.csv",
-        mime="text/csv"
+        mime="text/csv",
     )
 
 with open("exemple2.csv", "rb") as f2:
@@ -185,61 +207,76 @@ with open("exemple2.csv", "rb") as f2:
         label="📥 Exemple altres espècies/unitats (exemple2.csv)",
         data=f2,
         file_name="exemple2.csv",
-        mime="text/csv"
+        mime="text/csv",
     )
 
 
 # 1. Selecció inicial
-especie = st.selectbox("Espècie:", ['Isard', 'Cabirol', 'Mufló'])
+especie = st.selectbox("Espècie:", ["Isard", "Cabirol", "Mufló"])
 unidad = st.selectbox(
     "Unitat de gestió:",
-    ['VC Enclar', 'VC Xixerella', 'VCR Ansó-Sorteny', 'VCR Ansó', 'VC Sorteny', 'VT Escaldes-Engordany', 'TCC']
+    [
+        "VC Enclar",
+        "VC Xixerella",
+        "VCR Ansó-Sorteny",
+        "VCR Ansó",
+        "VC Sorteny",
+        "VT Escaldes-Engordany",
+        "TCC",
+    ],
 )
 
 # 3. Carrega CSV i vista prèvia
 df = None
-file = st.file_uploader("CSV sol·licitants", type='csv')
+file = st.file_uploader("CSV sol·licitants", type="csv")
 if file:
-    df = pd.read_csv(file, sep=';')
+    df = pd.read_csv(file, sep=";")
     st.subheader("Previsualització de sol·licitants")
     st.dataframe(df)
 
 # 4. Configuració de Tipus de captura dinàmica
-options = ['Femella', 'Mascle', 'Adult', 'Juvenil', 'Trofeu', 'Selectiu', 'Indeterminat']
+options = [
+    "Femella",
+    "Mascle",
+    "Adult",
+    "Juvenil",
+    "Trofeu",
+    "Selectiu",
+    "Indeterminat",
+]
 # Si Isard+TTC, demanar total captures
 tipus_captures = []
 quantitats = {}
-if especie == 'Isard' and unidad == 'TCC':
+if especie == "Isard" and unidad == "TCC":
     total_cap = st.number_input("Quantitat Captures:", min_value=1, step=1)
 else:
-    if 'configs' not in st.session_state:
-        st.session_state['configs'] = [{'selections': [], 'qty': 1}]
+    if "configs" not in st.session_state:
+        st.session_state["configs"] = [{"selections": [], "qty": 1}]
     if st.button("Afegeix Tipus"):
-        st.session_state['configs'].append({'selections': [], 'qty': 1})
-    for idx, conf in enumerate(st.session_state['configs']):
+        st.session_state["configs"].append({"selections": [], "qty": 1})
+    for idx, conf in enumerate(st.session_state["configs"]):
         st.subheader(f"Tipus {idx+1}")
         sel = st.multiselect(
             f"Seleccioni un o diversos valors per Tipus {idx+1}:",
             options,
-            key=f"sel_{idx}"
+            key=f"sel_{idx}",
         )
-        if 'Indeterminat' in sel:
-            sel = ['Indeterminat']
+        if "Indeterminat" in sel:
+            sel = ["Indeterminat"]
         qty = st.number_input(
-            f"Nº captures per Tipus {idx+1}:",
-            min_value=1,
-            step=1,
-            key=f"qty_{idx}"
+            f"Nº captures per Tipus {idx+1}:", min_value=1, step=1, key=f"qty_{idx}"
         )
-        st.session_state['configs'][idx]['selections'] = sel
-        st.session_state['configs'][idx]['qty'] = qty
-        # Preparar llistes\        
-        val = sel[0] if len(sel)==1 else '+'.join(sel)
+        st.session_state["configs"][idx]["selections"] = sel
+        st.session_state["configs"][idx]["qty"] = qty
+        # Preparar llistes\
+        val = sel[0] if len(sel) == 1 else "+".join(sel)
         tipus_captures.append(val)
         quantitats[val] = qty
 
 # 2. Semilla opcional
-seed = st.number_input("Llavor opcional (Nombre enter):", min_value=0, step=1, format="%d")
+seed = st.number_input(
+    "Llavor opcional (Nombre enter):", min_value=0, step=1, format="%d"
+)
 seed = None if seed == 0 else seed
 
 # 5. Executar sorteig
@@ -249,7 +286,7 @@ if st.button("Executar sorteig"):
     else:
         tipus_captures = []
         quantitats = {}
-        if especie == 'Isard' and unidad == 'TCC':
+        if especie == "Isard" and unidad == "TCC":
             if total_cap is None:
                 st.warning("Cal especificar el nombre de captures.")
                 st.stop()
@@ -259,11 +296,11 @@ if st.button("Executar sorteig"):
                 st.error(str(e))
                 st.stop()
         else:
-            for conf in st.session_state.get('configs', []):
-                sel = conf['selections']
-                val = sel[0] if len(sel) == 1 else '+'.join(sel)
+            for conf in st.session_state.get("configs", []):
+                sel = conf["selections"]
+                val = sel[0] if len(sel) == 1 else "+".join(sel)
                 tipus_captures.append(val)
-                quantitats[val] = conf['qty']
+                quantitats[val] = conf["qty"]
             try:
                 result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
             except ValueError as e:
@@ -273,14 +310,14 @@ if st.button("Executar sorteig"):
         st.subheader("Resultats del sorteig")
         st.dataframe(result)
         st.download_button(
-            'Descarregar CSV',
+            "Descarregar CSV",
             result.to_csv(index=False),
-            file_name=f"sorteig_{especie}_{unidad}.csv"
+            file_name=f"sorteig_{especie}_{unidad}.csv",
         )
 else:
     if df is None:
         st.info("Puja un CSV per iniciar el sorteig.")
     else:
-        if not (especie == 'Isard' and unidad == 'TCC'):
-            if st.session_state.get('configs') is None:
+        if not (especie == "Isard" and unidad == "TCC"):
+            if st.session_state.get("configs") is None:
                 st.info("Configura els Tipus i quantitats abans d'executar.")
