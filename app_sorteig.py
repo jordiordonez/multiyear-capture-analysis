@@ -28,7 +28,7 @@ MATCH_PARROQUIES = {
     "SJ": "Sant Julià de Lòria",
     "SJL": "Sant Julià de Lòria",
     "JULIA": "Sant Julià de Lòria",
-    "SAN": "Sant Julià de Lòria",
+    "SANT": "Sant Julià de Lòria",
     "ESC": "Escaldes-Engordany",
     "CALDES": "Escaldes-Engordany"
 }
