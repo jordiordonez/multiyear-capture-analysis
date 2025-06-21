@@ -3,6 +3,20 @@ import pandas as pd
 import numpy as np
 import math
 
+# Percentatges de captures reservades per parròquia en vedats
+VEDAT_PARRÒQUIES = {
+    "VC Enclar": {
+        "Andorra la Vella": 0.522,
+        "Sant Julià de Lòria": 0.478,
+    },
+    "VC Sorteny": {  # Ransol-Sorteny
+        "Canillo": 0.5,
+        "Ordino": 0.5,
+    },
+    "VC Xixerella": {"La Massana": 1.0},
+    "VT Escaldes-Engordany": {"La Massana": 1.0},
+}
+
 
 # Funció per al sorteig amb colles (lògica existent)
 def assignar_isards_sorteig_csv(
@@ -132,6 +146,93 @@ def assignar_captura_csv(
     return df
 
 
+# Sorteig amb possibles prioritats parroquials per a vedats
+def assignar_captura_parroquial_csv(
+    df: pd.DataFrame,
+    tipus_captures: list,
+    quantitats: dict,
+    unitat: str,
+    seed: int = None,
+) -> pd.DataFrame:
+    required = {
+        "ID",
+        "Prioritat",
+        "anys_sense_captura",
+        "Resultat_sorteigs_mateixa_sps",
+    }
+    if not required.issubset(df.columns):
+        missing = required - set(df.columns)
+        raise ValueError(f"Falten columnes: {missing}")
+
+    if unitat.startswith("V") and "Parroquia" not in df.columns:
+        raise ValueError("El CSV ha d'incloure la columna 'Parroquia' per aquest vedat")
+
+    df = df.copy()
+    if "Adjudicats" not in df.columns:
+        df["Adjudicats"] = 0
+
+    rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
+
+    # Configuració de quotes parroquials
+    total_caps = sum(quantitats.get(t, 0) for t in tipus_captures)
+    parr_quota = {}
+    if unitat.startswith("V"):
+        info = VEDAT_PARRÒQUIES.get(unitat, {})
+        for parr, pct in info.items():
+            parr_quota[parr] = int(round(total_caps * 0.5 * pct, 0))
+    assignats_parr = {k: 0 for k in parr_quota}
+
+    for i, tipus in enumerate(tipus_captures, start=1):
+        target = quantitats.get(tipus, 0)
+        assigned = 0
+        safe = tipus.replace("+", "_")
+        col_name = f"Adjudicats_Tipus{i}_{safe}"
+        df[col_name] = 0
+        while assigned < target:
+            df["Adjudicats_acumulats"] = (
+                df["Adjudicats"] + df["Resultat_sorteigs_mateixa_sps"]
+            )
+            min_acc = df["Adjudicats_acumulats"].min()
+            candidates = df[df["Adjudicats_acumulats"] == min_acc].copy()
+            candidates["rand"] = rng.random(size=len(candidates))
+            if min_acc == 0:
+                min_prio = candidates["Prioritat"].min()
+                group = candidates[candidates["Prioritat"] == min_prio].copy()
+            else:
+                group = candidates
+
+            if unitat.startswith("V") and parr_quota:
+                group["quota"] = group["Parroquia"].apply(
+                    lambda p: parr_quota.get(p, 0) - assignats_parr.get(p, 0)
+                )
+                group["quota_flag"] = group["quota"] > 0
+                order_cols = ["quota_flag", "rand"]
+                order_asc = [False, True]
+            else:
+                order_cols = ["rand"]
+                order_asc = [True]
+
+            selected = group.sort_values(by=order_cols, ascending=order_asc).iloc[0]
+            idx = selected.name
+            df.at[idx, "Adjudicats"] += 1
+            df.at[idx, col_name] += 1
+            assigned += 1
+            if unitat.startswith("V") and selected.get("Parroquia") in assignats_parr:
+                assignats_parr[selected["Parroquia"]] += 1
+
+    df["Nou_Resultat_sorteigs_mateixa_sps"] = (
+        df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
+    )
+    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nou_anys_sense_captura"] = df.apply(
+        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1,
+        axis=1,
+    )
+    if "Adjudicats_acumulats" in df.columns:
+        df.drop(columns=["Adjudicats_acumulats"], inplace=True)
+    return df
+
+
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 # Instruccions d'ús en català
@@ -176,6 +277,7 @@ st.markdown(
     ### 🦌 Altres espècies / unitats de gestió
 
     A més de les columnes anteriors, s’ha de preveure una columna per cada **tipus de captura disponible**, amb el nombre de captures que es vol assignar.
+    Si la unitat triada és un vedat (comença per `V`), el CSV ha d'incloure també la columna `Parroquia`.
 
     La configuració dels tipus de captura es fa a l’apartat següent de l’aplicació. Exemple:
 
@@ -223,8 +325,21 @@ unidad = st.selectbox(
         "VC Sorteny",
         "VT Escaldes-Engordany",
         "TCC",
+        "TCC-UGC",
+        "TCC-UGE",
+        "TCC-UGO",
+        "TCC-UGEO",
     ],
 )
+
+if unidad.startswith("V"):
+    info = VEDAT_PARRÒQUIES.get(unidad, {})
+    if info:
+        parts = [f"{p}: {round(50 * pct, 1)}%" for p, pct in info.items()]
+        st.info(
+            "El 50% de les captures es reparteix per parròquia en aquests percentatges: "
+            + ", ".join(parts)
+        )
 
 # 3. Carrega CSV i vista prèvia
 df = None
@@ -302,7 +417,9 @@ if st.button("Executar sorteig"):
                 tipus_captures.append(val)
                 quantitats[val] = conf["qty"]
             try:
-                result = assignar_captura_csv(df, tipus_captures, quantitats, seed)
+                result = assignar_captura_parroquial_csv(
+                    df, tipus_captures, quantitats, unidad, seed
+                )
             except ValueError as e:
                 st.error(str(e))
                 st.stop()
