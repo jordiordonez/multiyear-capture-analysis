@@ -34,6 +34,8 @@ MATCH_PARROQUIES = {
 }
 
 def normalitza_parroquia(valor):
+    if not isinstance(valor, str):
+        valor = str(valor)
     valor = valor.strip()
     if pd.isnull(valor):
         return None
