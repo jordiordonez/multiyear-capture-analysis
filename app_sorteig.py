@@ -361,9 +361,14 @@ st.markdown(
 
     🔍 **Nota sobre les quotes parroquials en vedats:**
 
-    Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% per a les parròquies s’aplica sobre la **suma total de captures** definides per al sorteig.  
-    Aquest total és el que es reparteix entre les parròquies segons el percentatge establert per cada vedat.  
-    Les captures es distribueixen dins aquest 50% en funció del nombre de sol·licitants per parròquia i les seves prioritats individuals.
+   Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% de captures per a les parròquies s’aplica sobre la suma total de captures definides per al sorteig.
+    Aquest percentatge es reparteix entre les parròquies afectades segons el percentatge establert per vedat.
+    ⚠️ Aquest 50% no és obligatòriament assolit.
+    L’assignació de captures dins aquesta quota segueix les prioritats individuals dels caçadors. La condició per donar preferència a un caçador de la parròquia és:
+    Que tingui la mateixa prioritat individual que altres sol·licitants, i
+    Que la seva parròquia no hagi assolit encara el percentatge corresponent dins del 50%.
+    Un cop es compleixen aquestes dues condicions, el sistema prioritza els caçadors locals fins a exhaurir la quota. Un cop superada, totes les captures es reparteixen exclusivament per prioritat individual.
+    
     🧭 **Parròquies**: es recomana introduir-les amb codis numèrics per evitar errors:
 
     | Codi | Parròquia              |
@@ -376,7 +381,7 @@ st.markdown(
     | 6    | Sant Julià de Lòria    |
     | 7    | Escaldes-Engordany     |
 
-    Si el nom està escrit de manera alternativa (amb majúscules, minúscules, abreviatures com `SJ`, `CALDES`, etc.), també serà reconegut automàticament, però **es recomana el format numèric** per garantir la màxima fiabilitat.
+    Si el nom està escrit de manera alternativa (amb majúscules, minúscules, abreviatures com `SJ`, `ESCALDES`, etc.), també serà reconegut automàticament, però **es recomana el format numèric** per garantir la màxima fiabilitat.
 
 
     ---
@@ -426,8 +431,8 @@ if unidad.startswith("V"):
         # Mostra percentatges sobre el 50%
         data = []
         for p, pct in info.items():
-            percent_50 = round(pct * 50, 1)
-            data.append({"Parròquia": p, "% del 50%": percent_50})
+            percent_50 = round(pct * 50, 2)
+            data.append({"Parròquia": p, "% del total de captures prioritzat per la Parròquia": percent_50})
         df_info = pd.DataFrame(data)
         st.dataframe(df_info)
         st.markdown("_Aquest és el repartiment previst de captures reservades per parròquia si s’esgotés el 50%._")
