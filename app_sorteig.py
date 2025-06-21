@@ -62,7 +62,7 @@ VEDAT_PARRÒQUIES = {
         "Andorra la Vella": 0.522,
         "Escaldes-Engordany": 0.003
     },
-    "VC Sorteny": {  # Ransol-Sorteny
+    "VC Ransol Sorteny": {  # Ransol-Sorteny
         "Canillo": 0.5,
         "Ordino": 0.5,
     },
@@ -409,9 +409,7 @@ unidad = st.selectbox(
     [
         "VC Enclar",
         "VC Xixerella",
-        "VCR Ansó-Sorteny",
-        "VCR Ansó",
-        "VC Sorteny",
+        "VC Ransol Sorteny",
         "VT Escaldes-Engordany",
         "TCC",
         "TCC-UGC",
