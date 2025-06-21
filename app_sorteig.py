@@ -2,19 +2,70 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import math
+import unicodedata
+import re
+
+# Mapa de codis oficials
+CODI_PARROQUIES = {
+    1: "Canillo",
+    2: "Encamp",
+    3: "Ordino",
+    4: "La Massana",
+    5: "Andorra la Vella",
+    6: "Sant Julià de Lòria",
+    7: "Escaldes-Engordany"
+}
+
+# Expressió simplificada per identificació flexible
+MATCH_PARROQUIES = {
+    "CAN": "Canillo",
+    "ENC": "Encamp",
+    "ORD": "Ordino",
+    "MAS": "La Massana",
+    "LM": "La Massana",
+    "ALV": "Andorra la Vella",  # o només "AND"
+    "AND": "Andorra la Vella",
+    "SJ": "Sant Julià de Lòria",
+    "SJL": "Sant Julià de Lòria",
+    "JULIA": "Sant Julià de Lòria",
+    "SAN": "Sant Julià de Lòria",
+    "ESC": "Escaldes-Engordany",
+    "CALDES": "Escaldes-Engordany"
+}
+
+def normalitza_parroquia(valor):
+    valor = valor.strip()
+    if pd.isnull(valor):
+        return None
+    try:
+        num = int(str(valor).strip())
+        return CODI_PARROQUIES.get(num, None)
+    except ValueError:
+        pass
+    txt = str(valor).lower()
+    txt = unicodedata.normalize("NFD", txt)
+    txt = txt.encode("ascii", "ignore").decode("utf-8")
+    txt = re.sub(r"[^a-z]", "", txt)
+
+    for clau, nom in MATCH_PARROQUIES.items():
+        if clau.lower() in txt:
+            return nom
+    return None  # Valor no reconegut
 
 # Percentatges de captures reservades per parròquia en vedats
 VEDAT_PARRÒQUIES = {
     "VC Enclar": {
+        "La Massana": 0.234,
+        "Sant Julià de Lòria": 0.241,
         "Andorra la Vella": 0.522,
-        "Sant Julià de Lòria": 0.478,
+        "Escaldes-Engordany": 0.003
     },
     "VC Sorteny": {  # Ransol-Sorteny
         "Canillo": 0.5,
         "Ordino": 0.5,
     },
     "VC Xixerella": {"La Massana": 1.0},
-    "VT Escaldes-Engordany": {"La Massana": 1.0},
+    "VT Escaldes-Engordany": {"Escaldes-Engordany": 1.0},
 }
 
 
@@ -163,6 +214,20 @@ def assignar_captura_parroquial_csv(
     if not required.issubset(df.columns):
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
+    if "Parroquia" in df.columns:
+        df["Parroquia_Normalitzada"] = df["Parroquia"].apply(normalitza_parroquia)
+        errors = df[df["Parroquia_Normalitzada"].isnull()]
+        if not errors.empty:
+            st.error(
+                "⚠️ Hi ha valors de 'Parroquia' no reconeguts. Si us plau, reviseu aquestes files:"
+            )
+            st.dataframe(errors[["ID", "Parroquia"]])
+            st.markdown(
+                "💡 Utilitzeu els codis oficials de parròquia (1=Canillo, 2=Encamp, ..., 7=Escaldes)."
+            )
+            st.stop()
+    df["Parroquia"] = df["Parroquia_Normalitzada"]
+    df.drop(columns=["Parroquia_Normalitzada"], inplace=True)
 
     if unitat.startswith("V") and "Parroquia" not in df.columns:
         raise ValueError("El CSV ha d'incloure la columna 'Parroquia' per aquest vedat")
@@ -259,7 +324,7 @@ st.markdown(
 
     ---
 
-    ### 🏔️ Cas `Isard` amb `TCC`
+    ### 🏔️ Cas `Isard` amb `TCC` (Només `TTC`i no `TTC-UGO` o altres )
 
     El fitxer CSV ha de contenir les següents columnes:
 
@@ -292,10 +357,32 @@ st.markdown(
 
     ---
 
-    💡 Pots descarregar exemples de fitxers aquí:
+    🔍 **Nota sobre les quotes parroquials en vedats:**
 
+    Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% per a les parròquies s’aplica sobre la **suma total de captures** definides per al sorteig.  
+    Aquest total és el que es reparteix entre les parròquies segons el percentatge establert per cada vedat.  
+    Les captures es distribueixen dins aquest 50% en funció del nombre de sol·licitants per parròquia i les seves prioritats individuals.
+    🧭 **Parròquies**: es recomana introduir-les amb codis numèrics per evitar errors:
+
+    | Codi | Parròquia              |
+    |------|------------------------|
+    | 1    | Canillo                |
+    | 2    | Encamp                 |
+    | 3    | Ordino                 |
+    | 4    | La Massana             |
+    | 5    | Andorra la Vella       |
+    | 6    | Sant Julià de Lòria    |
+    | 7    | Escaldes-Engordany     |
+
+    Si el nom està escrit de manera alternativa (amb majúscules, minúscules, abreviatures com `SJ`, `CALDES`, etc.), també serà reconegut automàticament, però **es recomana el format numèric** per garantir la màxima fiabilitat.
+
+
+    ---
+
+    💡 Pots descarregar exemples de fitxers aquí:
     """
 )
+
 with open("exemple1.csv", "rb") as f1:
     st.download_button(
         label="📥 Exemple Isard TCC (exemple1.csv)",
@@ -335,11 +422,16 @@ unidad = st.selectbox(
 if unidad.startswith("V"):
     info = VEDAT_PARRÒQUIES.get(unidad, {})
     if info:
-        parts = [f"{p}: {round(50 * pct, 1)}%" for p, pct in info.items()]
-        st.info(
-            "El 50% de les captures es reparteix per parròquia en aquests percentatges: "
-            + ", ".join(parts)
-        )
+        st.subheader("📍 Repartiment parroquial (50% reservat)")
+        # Mostra percentatges sobre el 50%
+        data = []
+        for p, pct in info.items():
+            percent_50 = round(pct * 50, 1)
+            data.append({"Parròquia": p, "% del 50%": percent_50})
+        df_info = pd.DataFrame(data)
+        st.dataframe(df_info)
+        st.markdown("_Aquest és el repartiment previst de captures reservades per parròquia si s’esgotés el 50%._")
+
 
 # 3. Carrega CSV i vista prèvia
 df = None
@@ -426,6 +518,19 @@ if st.button("Executar sorteig"):
             st.info("L'any següent, prioritat 1 als qui hagin abatut femella.")
         st.subheader("Resultats del sorteig")
         st.dataframe(result)
+        # Mostrar resum per parròquia si és un vedat
+        if unidad.startswith("V") and "Parroquia" in result.columns:
+            st.subheader("📊 Resum per parròquia")
+            adj_per_parr = result.groupby("Parroquia")["Adjudicats"].sum().reset_index()
+            adj_per_parr["% del total"] = (
+                adj_per_parr["Adjudicats"] / adj_per_parr["Adjudicats"].sum() * 100
+            ).round(1)
+            st.dataframe(adj_per_parr)
+
+            st.markdown(
+                "_Aquest resum mostra quantes captures s'han assignat a cada parròquia entre totes les modalitats._"
+            )
+
         st.download_button(
             "Descarregar CSV",
             result.to_csv(index=False),
