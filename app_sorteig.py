@@ -129,9 +129,9 @@ def assignar_isards_sorteig_csv(
         idxs = sorted_g.index[:take]
         df.loc[idxs, "adjudicats"] += 1
         rem -= take
-    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
+        lambda r: 0 if r["adjudicats"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     return df
 
@@ -150,8 +150,7 @@ def assignar_captura_csv(
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
     df = df.copy()
-    if "Adjudicats" not in df.columns:
-        df["Adjudicats"] = 0
+    df["Adjudicats"] = 0
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
     # Creem columnes individuals per cada Tipus\
     for i, tipus in enumerate(tipus_captures, start=1):
@@ -190,9 +189,13 @@ def assignar_captura_csv(
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
     # Calcular nova prioritat i anys sense captura
-    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nova_prioritat"] = df.apply(
+        lambda row: 4 if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else row["Prioritat"],
+    axis=1
+    )
+    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
+        lambda r: 0 if r["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     if "Adjudicats_acumulats" in df.columns:
         df.drop(columns=["Adjudicats_acumulats"], inplace=True)
@@ -235,8 +238,7 @@ def assignar_captura_parroquial_csv(
         raise ValueError("El CSV ha d'incloure la columna 'Parroquia' per aquest vedat")
 
     df = df.copy()
-    if "Adjudicats" not in df.columns:
-        df["Adjudicats"] = 0
+    df["Adjudicats"] = 0
 
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
 
@@ -290,10 +292,14 @@ def assignar_captura_parroquial_csv(
     df["Nou_Resultat_sorteigs_mateixa_sps"] = (
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
-    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+   # Calcular nova prioritat i anys sense captura
+    df["nova_prioritat"] = df.apply(
+        lambda row: 4 if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else row["Prioritat"],
+    axis=1
+    )
+    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1,
-        axis=1,
+        lambda r: 0 if r["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     if "Adjudicats_acumulats" in df.columns:
         df.drop(columns=["Adjudicats_acumulats"], inplace=True)
@@ -303,92 +309,96 @@ def assignar_captura_parroquial_csv(
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 # Instruccions d'ús en català
-st.markdown(
-    """
-    ## Instruccions d'ús:
+with st.expander("Instruccions d'ús"):
+    st.markdown(
+        """
+        1. Seleccioneu l'espècie i la unitat de gestió.
+        2. Pugeu el fitxer CSV de sol·licitants.
+        3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran:
+           - Clic a "Afegeix Tipus"
+           - seleccioneu un o diversos valors
+           - indiqueu el nombre de captures.
+        4. Opcional: introduïu una llavor per reproduir el mateix sorteig.
+        5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
+        """
+    )
 
-    1. Seleccioneu l'espècie i la unitat de gestió.
-    2. Pugeu el fitxer CSV de sol·licitants.
-    3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran :
-        - Clic a "Afegeix Tipus", 
-        - seleccioneu un o diversos valors 
-        - indiqueu el nombre de captures.
-    4. Opcional: introduïu una llavor per a reproduir el mateix sorteig.
-    5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
-    """
-)
+with st.expander("Cas `Isard` amb `TCC`"):
+    st.markdown(
+        """
+        El fitxer CSV ha de contenir les següents columnes:
+        | Columna | Descripció |
+        |----------------------------------|--------------------------------------------|
+        | `ID` | Identificador únic del caçador |
+        | `Modalitat` | Modalitat d'inscripció (`A` = colla, `B` = individual) |
+        | `Colla_ID` | Identificador de la colla |
+        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
+        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
+        """
+    )
 
-st.markdown(
-    """
-    ## 📄 Instruccions – Format dels fitxers CSV
+with st.expander("Altres espècies / unitats de gestió"):
+    st.markdown(
+        """
+        A més de les columnes anteriors, cal una columna per cada **tipus de captura disponible** amb el nombre de captures que es vol assignar. Si la unitat triada és un vedat (comença per `V`), el CSV ha d'incloure també la columna `Parroquia`.
 
-    Segons l'espècie i la unitat de gestió seleccionades, el format del fitxer d'entrada canvia lleugerament.
+        La configuració dels tipus de captura es fa a l'apartat següent de l'aplicació. Exemple:
 
-    ---
+        | Columna | Exemple de valor |
+        |----------------------------------|------------------|
+        | `ID` | Identificador únic del caçador |
+        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
+        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
+        | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
+        | `Parroquia` | Si es tracta d'un Vedat |
+        """
+    )
 
-    ### 🏔️ Cas `Isard` amb `TCC` (Només `TTC`i no `TTC-UGO` o altres )
+with st.expander("Nota sobre les quotes parroquials en vedats"):
+    st.markdown(
+        """
+        Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% de captures per a les parròquies s'aplica sobre la suma total de captures definides per al sorteig. Aquest percentatge es reparteix entre les parròquies afectades segons el percentatge establert per vedat.
 
-    El fitxer CSV ha de contenir les següents columnes:
+        ⚠️ Aquest 50% no és obligatòriament assolit. L'assignació de captures dins aquesta quota segueix les prioritats individuals dels caçadors. La condició per donar preferència a un caçador de la parròquia és:
+        - Que tingui la mateixa prioritat individual que altres sol·licitants.
+        - Que la seva parròquia no hagi assolit encara el percentatge corresponent dins del 50%.
 
-    | Columna                         | Descripció                                                                 |
-    |----------------------------------|----------------------------------------------------------------------------|
-    | `ID`                            | Identificador únic del caçador                                   |
-    | `Modalitat`                     | Modalitat d'inscripció (`A` = colla, `B` = individual)            |
-    | `Colla_ID`                      | Identificador de la colla                                       |
-    | `Prioritat`                     | Prioritat actual del caçador (nombre enter: 1 = màxima)                   |
-    | `anys_sense_captura`           | Anys consecutius sense captura (nombre enter)                              |
-    | `Resultat_sorteigs_mateixa_sps`| Captures acumulades per la mateixa espècie en anys anteriors (nombre enter) |
+        Un cop es compleixen aquestes dues condicions, el sistema prioritza els caçadors locals fins a exhaurir la quota. Un cop superada, totes les captures es reparteixen exclusivament per prioritat individual.
+        """
+    )
 
-    ---
+with st.expander("Parròquies"):
+    st.markdown(
+        """
+        | Codi | Parròquia              |
+        |------|------------------------|
+        | 1    | Canillo                |
+        | 2    | Encamp                 |
+        | 3    | Ordino                 |
+        | 4    | La Massana             |
+        | 5    | Andorra la Vella       |
+        | 6    | Sant Julià de Lòria    |
+        | 7    | Escaldes-Engordany     |
 
-    ### 🦌 Altres espècies / unitats de gestió
+        Si el nom està escrit de manera alternativa (majúscules, minúscules, abreviatures com `SJ`, `ESCALDES`, etc.), també serà reconegut automàticament, però **es recomana el format numèric** per garantir la màxima fiabilitat.
+        """
+    )
 
-    A més de les columnes anteriors, s’ha de preveure una columna per cada **tipus de captura disponible**, amb el nombre de captures que es vol assignar.
-    Si la unitat triada és un vedat (comença per `V`), el CSV ha d'incloure també la columna `Parroquia`.
+with st.expander("Columnes del fitxer de resultats"):
+    st.markdown(
+        """
+        El CSV resultants inclou:
+        - `Adjudicats`: nombre total de captures assignades al caçador.
+        - Columnes `Adjudicats_TipusX_<nom>` per a cada tipus de captura.
+        - `Nou_Resultat_sorteigs_mateixa_sps`: suma acumulada de captures d'aquesta espècie.
+        - `nova_prioritat`: prioritat a utilitzar si es repeteix sorteig de la mateixa espècie durant l'any actual.
+        - `nova_prioritat Any següent`: prioritat que es tindrà en compte per a la temporada següent.
 
-    La configuració dels tipus de captura es fa a l’apartat següent de l’aplicació. Exemple:
+        Si cal fer un altre sorteig de la mateixa espècie en el mateix any, torneu a carregar el CSV generat i substituïu `Prioritat` per `nova_prioritat` i `Resultat_sorteigs_mateixa_sps` per `Nou_Resultat_sorteigs_mateixa_sps`. A l'inici de cada temporada s'hauran d'actualitzar manualment els caçadors de prioritat 1 segons si havien abatut una femella l'any anterior.
+        """
+    )
 
-    | Columna                         | Exemple de valor                          |
-    |----------------------------------|--------------------------------------------|
-    | `ID`                            | HNTR_048                                   |
-    | `Prioritat`                     | 2                                          |
-    | `anys_sense_captura`           | 1                                          |
-    | `Resultat_sorteigs_mateixa_sps`| 0                                          |
-    | `Femella`                      | 1                                          |
-    | `Mascle+Trofeu`                | 0                                          |
-
-    ---
-
-    🔍 **Nota sobre les quotes parroquials en vedats:**
-
-   Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% de captures per a les parròquies s’aplica sobre la suma total de captures definides per al sorteig.
-    Aquest percentatge es reparteix entre les parròquies afectades segons el percentatge establert per vedat.
-    ⚠️ Aquest 50% no és obligatòriament assolit.
-    L’assignació de captures dins aquesta quota segueix les prioritats individuals dels caçadors. La condició per donar preferència a un caçador de la parròquia és:
-    Que tingui la mateixa prioritat individual que altres sol·licitants, i
-    Que la seva parròquia no hagi assolit encara el percentatge corresponent dins del 50%.
-    Un cop es compleixen aquestes dues condicions, el sistema prioritza els caçadors locals fins a exhaurir la quota. Un cop superada, totes les captures es reparteixen exclusivament per prioritat individual.
-    
-    🧭 **Parròquies**: es recomana introduir-les amb codis numèrics per evitar errors:
-
-    | Codi | Parròquia              |
-    |------|------------------------|
-    | 1    | Canillo                |
-    | 2    | Encamp                 |
-    | 3    | Ordino                 |
-    | 4    | La Massana             |
-    | 5    | Andorra la Vella       |
-    | 6    | Sant Julià de Lòria    |
-    | 7    | Escaldes-Engordany     |
-
-    Si el nom està escrit de manera alternativa (amb majúscules, minúscules, abreviatures com `SJ`, `ESCALDES`, etc.), també serà reconegut automàticament, però **es recomana el format numèric** per garantir la màxima fiabilitat.
-
-
-    ---
-
-    💡 Pots descarregar exemples de fitxers aquí:
-    """
-)
+st.markdown("💡 Pots descarregar exemples de fitxers aquí:")
 
 with open("exemple1.csv", "rb") as f1:
     st.download_button(
@@ -427,7 +437,7 @@ unidad = st.selectbox(
 if unidad.startswith("V"):
     info = VEDAT_PARRÒQUIES.get(unidad, {})
     if info:
-        st.subheader("📍 Repartiment parroquial (50% reservat)")
+        st.subheader("📍 Repartiment parroquial (50% prioritzat en cas de mateixa prioritat individual)")
         # Mostra percentatges sobre el 50%
         data = []
         for p, pct in info.items():
