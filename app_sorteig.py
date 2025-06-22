@@ -344,6 +344,7 @@ with st.expander("Altres espècies / unitats de gestió"):
         | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
         | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
         | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
+        | `Parroquia` | Si es tracta d'un Vedat |
         """
     )
 
