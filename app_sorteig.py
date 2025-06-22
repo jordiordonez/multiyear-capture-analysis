@@ -129,9 +129,9 @@ def assignar_isards_sorteig_csv(
         idxs = sorted_g.index[:take]
         df.loc[idxs, "adjudicats"] += 1
         rem -= take
-    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
+        lambda r: 0 if r["adjudicats"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     return df
 
@@ -190,9 +190,10 @@ def assignar_captura_csv(
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
     # Calcular nova prioritat i anys sense captura
-    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+    df["nova_prioritat"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else x)
+    df["nova_prioritat Any següent"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1, axis=1
+        lambda r: 0 if r["Adjudicats_acumulats"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     if "Adjudicats_acumulats" in df.columns:
         df.drop(columns=["Adjudicats_acumulats"], inplace=True)
@@ -290,10 +291,11 @@ def assignar_captura_parroquial_csv(
     df["Nou_Resultat_sorteigs_mateixa_sps"] = (
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
-    df["nova_prioritat"] = df["Adjudicats"].apply(lambda x: 4 if x > 1 else 2)
+   # Calcular nova prioritat i anys sense captura
+    df["nova_prioritat"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else x)
+    df["nova_prioritat Any següent"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
-        lambda r: 0 if r["Adjudicats"] == 1 else r["anys_sense_captura"] + 1,
-        axis=1,
+        lambda r: 0 if r["Adjudicats_acumulats"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
     if "Adjudicats_acumulats" in df.columns:
         df.drop(columns=["Adjudicats_acumulats"], inplace=True)
