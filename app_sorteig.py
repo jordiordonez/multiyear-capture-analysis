@@ -431,7 +431,7 @@ unidad = st.selectbox(
 if unidad.startswith("V"):
     info = VEDAT_PARRÒQUIES.get(unidad, {})
     if info:
-        st.subheader("📍 Repartiment parroquial (50% reservat)")
+        st.subheader("📍 Repartiment parroquial (50% prioritzat en cas de mateixa prioritat individual)")
         # Mostra percentatges sobre el 50%
         data = []
         for p, pct in info.items():
