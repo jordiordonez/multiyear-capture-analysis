@@ -189,7 +189,10 @@ def assignar_captura_csv(
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
     # Calcular nova prioritat i anys sense captura
-    df["nova_prioritat"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else x)
+    df["nova_prioritat"] = df.apply(
+        lambda row: 4 if row["Adjudicats_acumulats"] > 0 else row["Prioritat"],
+        axis=1
+    )
     df["nova_prioritat Any següent"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["Adjudicats_acumulats"] > 0 else r["anys_sense_captura"] + 1, axis=1
@@ -290,7 +293,10 @@ def assignar_captura_parroquial_csv(
         df["Resultat_sorteigs_mateixa_sps"] + df["Adjudicats"]
     )
    # Calcular nova prioritat i anys sense captura
-    df["nova_prioritat"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else x)
+    df["nova_prioritat"] = df.apply(
+        lambda row: 4 if row["Adjudicats_acumulats"] > 0 else row["Prioritat"],
+        axis=1
+    )
     df["nova_prioritat Any següent"] = df["Adjudicats_acumulats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["Adjudicats_acumulats"] > 0 else r["anys_sense_captura"] + 1, axis=1
