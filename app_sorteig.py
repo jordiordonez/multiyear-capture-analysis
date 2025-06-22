@@ -150,8 +150,7 @@ def assignar_captura_csv(
         missing = required - set(df.columns)
         raise ValueError(f"Falten columnes: {missing}")
     df = df.copy()
-    if "Adjudicats" not in df.columns:
-        df["Adjudicats"] = 0
+    df["Adjudicats"] = 0
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
     # Creem columnes individuals per cada Tipus\
     for i, tipus in enumerate(tipus_captures, start=1):
@@ -236,8 +235,7 @@ def assignar_captura_parroquial_csv(
         raise ValueError("El CSV ha d'incloure la columna 'Parroquia' per aquest vedat")
 
     df = df.copy()
-    if "Adjudicats" not in df.columns:
-        df["Adjudicats"] = 0
+    df["Adjudicats"] = 0
 
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
 
@@ -330,7 +328,6 @@ with st.expander("Cas `Isard` amb `TCC`"):
         | `Colla_ID` | Identificador de la colla |
         | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
         | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
-        | `Resultat_sorteigs_mateixa_sps` | Captures acumulades per la mateixa espècie en anys anteriors (nombre enter) |
         """
     )
 
@@ -343,10 +340,10 @@ with st.expander("Altres espècies / unitats de gestió"):
 
         | Columna | Exemple de valor |
         |----------------------------------|------------------|
-        | `ID` | HNTR_048 |
-        | `Prioritat` | 2 |
-        | `anys_sense_captura` | 1 |
-        | `Resultat_sorteigs_mateixa_sps` | 0 |
+        | `ID` | Identificador únic del caçador |
+        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
+        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
+        | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
         """
     )
 
