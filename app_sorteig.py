@@ -347,8 +347,6 @@ with st.expander("Altres espècies / unitats de gestió"):
         | `Prioritat` | 2 |
         | `anys_sense_captura` | 1 |
         | `Resultat_sorteigs_mateixa_sps` | 0 |
-        | `Femella` | 1 |
-        | `Mascle+Trofeu` | 0 |
         """
     )
 
