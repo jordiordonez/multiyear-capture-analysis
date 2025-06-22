@@ -351,6 +351,7 @@ with st.expander("Altres espècies / unitats de gestió"):
         | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
         | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
         | `Parroquia` | Si es tracta d'un Vedat |
+        
         El sorteig comença adjudicant Tipus 1, i si existeix, després el Tipus 2, i així successivament fins a exhaurir els Tipus.
         """
 
