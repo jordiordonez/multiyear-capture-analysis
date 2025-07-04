@@ -57,21 +57,27 @@ def assignar_isards_sorteig_csv(
     n_indiv = round(total_captures * n_indiv_applicants / total_applicants)
     n_colla = total_captures - n_indiv
 
-    # --- Distribution per colla
+    # --- Distribution per colla utilitzant Webster
     colles_df = df_colla.groupby('Colla_ID').size().reset_index(name='caçadors')
-    colles_df['floor'] = (colles_df['caçadors'] // ratio).astype(int)
-    colles_df['assignats'] = colles_df['floor']
 
-    # --- Calculate remaining captures for colles (proportional share of leftovers)
-    base_assigned = colles_df['assignats'].sum()
-    proportional_remainder = n_colla - base_assigned
-    for _ in range(proportional_remainder):
-        colles_df['rati'] = colles_df['assignats'] / colles_df['caçadors']
-        min_rati = colles_df['rati'].min()
-        candidates = colles_df[np.isclose(colles_df['rati'], min_rati, atol=1e-6)]
-        selected = candidates.sample(n=1, random_state=rng)
-        colla_id = selected['Colla_ID'].values[0]
-        colles_df.loc[colles_df['Colla_ID'] == colla_id, 'assignats'] += 1
+    def webster_allocate(counts, k, max_iter=1000):
+        counts = np.array(counts, dtype=float)
+        low, high = 0.0, max(counts)
+        for _ in range(max_iter):
+            d = (low + high) / 2 if high > low else high
+            if d == 0:
+                d = 1e-6
+            alloc = np.round(counts / d).astype(int)
+            s = int(alloc.sum())
+            if s == k or abs(high - low) < 1e-6:
+                return alloc.tolist()
+            if s > k:
+                low = d
+            else:
+                high = d
+        return np.round(counts / d).astype(int).tolist()
+
+    colles_df['assignats'] = webster_allocate(colles_df['caçadors'], n_colla)
 
     # --- Assign inside colles
     for _, row in colles_df.iterrows():

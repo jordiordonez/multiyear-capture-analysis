@@ -90,15 +90,25 @@ def assignar_isards_sorteig_csv(
     n_colla = total_captures - n_indiv
     # Assign dins colles
     colles = df_colla.groupby("Colla_ID").size().reset_index(name="caçadors")
-    colles["assignats"] = (colles["caçadors"] // ratio).astype(int)
-    leftover = n_colla - colles["assignats"].sum()
-    for _ in range(leftover):
-        colles["rati"] = colles["assignats"] / colles["caçadors"]
-        min_rati = colles["rati"].min()
-        cand = colles[np.isclose(colles["rati"], min_rati, atol=1e-6)]
-        sel = cand.sample(1, random_state=rng)
-        cid = sel["Colla_ID"].iloc[0]
-        colles.loc[colles["Colla_ID"] == cid, "assignats"] += 1
+
+    def webster_allocate(counts, k, max_iter=1000):
+        counts = np.array(counts, dtype=float)
+        low, high = 0.0, max(counts)
+        for _ in range(max_iter):
+            d = (low + high) / 2 if high > low else high
+            if d == 0:
+                d = 1e-6
+            alloc = np.round(counts / d).astype(int)
+            s = int(alloc.sum())
+            if s == k or abs(high - low) < 1e-6:
+                return alloc.tolist()
+            if s > k:
+                low = d
+            else:
+                high = d
+        return np.round(counts / d).astype(int).tolist()
+
+    colles["assignats"] = webster_allocate(colles["caçadors"], n_colla)
     for _, row in colles.iterrows():
         cid, to_assign = row["Colla_ID"], int(row["assignats"])
         while to_assign > 0:
