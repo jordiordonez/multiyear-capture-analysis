@@ -165,7 +165,12 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
                     assignats_parr[df.at[idx, "Parroquia"]] += 1
                 ordre += 1
 
-    return df[["ID", "ordre", "tipus", "Estranger"]].copy()
+    cols = ["ID", "ordre", "tipus", "Estranger"]
+    if "Parroquia" in df.columns:
+        cols.append("Parroquia")
+    out = df[cols].copy()
+    out["ordre"] = out["ordre"].astype("Int64")
+    return out
 
 
 # ── HELPER: PARSE 'Tipus' FIELD ──────────────────────────────────────────────
@@ -203,6 +208,7 @@ def processar_sorteigs(df1, df2, config, especie, seed):
             raise ValueError(f"ID duplicats al sorteig {sorteig}")
 
         part = subset.merge(df1, on="ID")
+        subset_ids = set(subset["ID"])
 
         if especie == "Isard" and sorteig == "IS TCC":
             total_cap = int(conf_rows["Quantitat"].sum())
@@ -239,15 +245,22 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         merge_cols = ["ID", f"ordre_{col_base}", f"tipus_{col_base}"]
         resultat = resultat.merge(asignats[merge_cols], on="ID", how="left")
 
-        resultat[col_base] = resultat[f"ordre_{col_base}"].fillna(0)
+        resultat[col_base] = resultat[f"ordre_{col_base}"]
+        mask_no_cap = resultat["ID"].isin(subset_ids) & resultat[col_base].isna()
+        resultat.loc[mask_no_cap, col_base] = 0
         resultat[f"Tipus_{col_base}"] = resultat[f"tipus_{col_base}"]
         resultat.drop(columns=[f"ordre_{col_base}", f"tipus_{col_base}"],
                       inplace=True)
+        resultat[col_base] = resultat[col_base].astype("Int64")
 
         total_cap = rezultat_cap = asignats[f"ordre_{col_base}"].notna().sum()
         estr = asignats[asignats["Estranger"] == "si"]\
                         [f"ordre_{col_base}"].count()
         tipus_counts = asignats[f"tipus_{col_base}"].value_counts().to_dict()
+        parr_counts = {}
+        if "Parroquia" in asignats.columns:
+            parr = asignats.loc[asignats[f"ordre_{col_base}"].notna(), "Parroquia"]
+            parr_counts = parr.value_counts().to_dict()
 
         resum = pd.DataFrame({
             "Sorteig": [sorteig],
@@ -256,6 +269,8 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         })
         for t, v in tipus_counts.items():
             resum[t] = v
+        for p, v in parr_counts.items():
+            resum[p] = v
         resum_sorteigs.append(resum)
 
     capture_cols = [s.replace(" ", "_") for s in ESPECIE_SORTEIGS[especie]]
@@ -349,6 +364,7 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["adjudicats"] else r["anys_sense_captura"] + 1, axis=1
     )
+    df["ordre"] = df["ordre"].astype("Int64")
     return df
 
 
