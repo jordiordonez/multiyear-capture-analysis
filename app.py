@@ -13,12 +13,17 @@ ESPECIE_SORTEIGS = OrderedDict({
     "Mufló":   ["MUF UGEO", "MUF UGC", "MUF VTE-E", "MUF VCE", "MUF R"],
 })
 
-VEDAT_PARRÒQUIES = {
-    "IS VCE":  {"La Massana": 0.234, "Sant Julià de Lòria": 0.241,
-                "Andorra la Vella": 0.522, "Escaldes-Engordany": 0.003},
-    "IS VCRS": {"Canillo": 0.5, "Ordino": 0.5},
-    "IS VCX":  {"La Massana": 1.0},
-}
+# Order of vedats must be preserved for UI display
+VEDAT_PARRÒQUIES = OrderedDict([
+    ("IS VCE", {
+        "La Massana": 0.234,
+        "Sant Julià de Lòria": 0.241,
+        "Andorra la Vella": 0.522,
+        "Escaldes-Engordany": 0.003,
+    }),
+    ("IS VCRS", {"Canillo": 0.5, "Ordino": 0.5}),
+    ("IS VCX", {"La Massana": 1.0}),
+])
 
 TIPUS_OPTIONS = [
     "Femella", "Mascle", "Adult", "Juvenil",
@@ -205,7 +210,7 @@ def processar_sorteigs(df1, df2, config, especie, seed):
                 raise ValueError("Total de captures per IS TCC ha de ser > 0")
             asignats = assignar_isards_sorteig_csv(
                 part, total_cap, seed=rng.randint(0, 2**32 - 1)
-            ).rename(columns={"adjudicats": "ordre"})
+            )
             asignats["tipus"] = "+".join(conf_rows.iloc[0]["Tipus"])
         else:
             tipus_quant = []
@@ -284,6 +289,8 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
 
     df = df.copy()
     df["adjudicats"] = 0
+    df["ordre"] = np.nan
+    ordre_counter = 1
     df_colla, df_indiv = df[df["Modalitat"] == "A"], df[df["Modalitat"] == "B"]
 
     total_applicants = len(df_colla) + len(df_indiv)
@@ -308,9 +315,16 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
             sub = df[(df["Modalitat"] == "A") & (df["Colla_ID"] == cid)]
             group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
             group["rand"] = rng.random(len(group))
-            idxs = group.sort_values(["Prioritat", "anys_sense_captura", "rand"],
-                                     ascending=[True, False, True]).index[:min(to_assign, len(group))]
-            df.loc[idxs, "adjudicats"] += 1
+            idxs = group.sort_values([
+                "Prioritat",
+                "anys_sense_captura",
+                "rand",
+            ], ascending=[True, False, True]).index[:min(to_assign, len(group))]
+            for idx in idxs:
+                if df.at[idx, "adjudicats"] == 0:
+                    df.at[idx, "ordre"] = ordre_counter
+                    ordre_counter += 1
+                df.at[idx, "adjudicats"] = 1
             to_assign -= len(idxs)
 
     # assign individuals
@@ -319,9 +333,16 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
         sub = df[df["Modalitat"] == "B"]
         group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
         group["rand"] = rng.random(len(group))
-        idxs = group.sort_values(["Prioritat", "anys_sense_captura", "rand"],
-                                 ascending=[True, False, True]).index[:min(rem, len(group))]
-        df.loc[idxs, "adjudicats"] += 1
+        idxs = group.sort_values([
+            "Prioritat",
+            "anys_sense_captura",
+            "rand",
+        ], ascending=[True, False, True]).index[:min(rem, len(group))]
+        for idx in idxs:
+            if df.at[idx, "adjudicats"] == 0:
+                df.at[idx, "ordre"] = ordre_counter
+                ordre_counter += 1
+            df.at[idx, "adjudicats"] = 1
         rem -= len(idxs)
 
     df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x else 2)
@@ -342,26 +363,41 @@ st.title("Sorteig captures")
 especie = st.selectbox("Espècie", list(ESPECIE_SORTEIGS.keys()))
 
 with st.expander("Configuració de captures per sorteig"):
-    initial_rows = [
-        {"Codi_Sorteig": c, "Tipus": "", "Quantitat": 0, "Aleatori": True}
-        for c in ESPECIE_SORTEIGS[especie]
-    ]
-    tipus_help = (
-        "Introdueix un o més tipus separats per comes.\n\n"
-        f"Valors vàlids: {', '.join(TIPUS_OPTIONS)}"
-    )
-    config_df = st.data_editor(
-        pd.DataFrame(initial_rows),
-        column_config={
-            "Tipus": st.column_config.TextColumn(
-                "Tipus (comma-separated)", help=tipus_help, width="medium"
-            ),
-            "Quantitat": st.column_config.NumberColumn("Quantitat", min_value=0, step=1),
-            "Aleatori": st.column_config.CheckboxColumn("Ordre aleatori"),
-        },
-        num_rows="dynamic",
-        key=f"config_{especie}",
-    )
+    for sorteig in ESPECIE_SORTEIGS[especie]:
+        st.markdown(f"### {sorteig}")
+        key_prefix = sorteig.replace(" ", "_")
+        if especie == "Isard" and sorteig == "IS TCC":
+            st.number_input(
+                "Quantitat Captures", min_value=0, step=1,
+                key=f"total_{key_prefix}"
+            )
+            st.session_state.setdefault(f"configs_{key_prefix}", [])
+        else:
+            aleatori_key = f"aleatori_{key_prefix}"
+            st.checkbox("Ordre aleatori", value=True, key=aleatori_key)
+
+            cfg_key = f"configs_{key_prefix}"
+            if cfg_key not in st.session_state:
+                st.session_state[cfg_key] = [{"selections": [], "qty": 0}]
+
+            if st.button("Afegeix Tipus", key=f"add_{key_prefix}"):
+                st.session_state[cfg_key].append({"selections": [], "qty": 0})
+
+            for idx, conf in enumerate(st.session_state[cfg_key]):
+                st.subheader(f"Tipus {idx+1}")
+                sel = st.multiselect(
+                    f"Valors Tipus {idx+1}",
+                    TIPUS_OPTIONS,
+                    default=conf["selections"],
+                    key=f"{key_prefix}_sel_{idx}"
+                )
+                if "Indeterminat" in sel:
+                    sel = ["Indeterminat"]
+                qty = st.number_input(
+                    "Quantitat", min_value=0, step=1,
+                    value=conf["qty"], key=f"{key_prefix}_qty_{idx}"
+                )
+                st.session_state[cfg_key][idx] = {"selections": sel, "qty": qty}
 
 csv1 = st.file_uploader("CSV principal", type="csv", key="csv1")
 csv2 = st.file_uploader("CSV de sorteigs", type="csv", key="csv2")
@@ -383,6 +419,31 @@ if st.button("Executar sorteig"):
     except ValueError as e:
         st.error(str(e))
         st.stop()
+
+    # Build configuration from the dynamic inputs
+    config_rows = []
+    for sorteig in ESPECIE_SORTEIGS[especie]:
+        key_prefix = sorteig.replace(" ", "_")
+        if especie == "Isard" and sorteig == "IS TCC":
+            total = st.session_state.get(f"total_{key_prefix}", 0)
+            config_rows.append({
+                "Codi_Sorteig": sorteig,
+                "Tipus": "",
+                "Quantitat": total,
+                "Aleatori": True,
+            })
+        else:
+            aleatori = st.session_state.get(f"aleatori_{key_prefix}", True)
+            for conf in st.session_state.get(f"configs_{key_prefix}", []):
+                tip = "+".join(conf["selections"]) if conf["selections"] else ""
+                config_rows.append({
+                    "Codi_Sorteig": sorteig,
+                    "Tipus": tip,
+                    "Quantitat": conf["qty"],
+                    "Aleatori": aleatori,
+                })
+
+    config_df = pd.DataFrame(config_rows)
 
     try:
         resultat, resums = processar_sorteigs(df1, df2, config_df, especie, seed)
