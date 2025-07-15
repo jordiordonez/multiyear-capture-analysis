@@ -565,7 +565,12 @@ csv2 = st.file_uploader("CSV d'inscrits", type="csv", key="csv2")
 seed_input = st.number_input("Llavor opcional", value=0, step=1)
 seed = int(seed_input) if seed_input else None
 
+# ─────────────────────  EXECUTAR SORTEIG  ────────────────────────────────
 if st.button("Executar sorteig"):
+
+    # ------------------------------------------------------------------ #
+    # 1️⃣  Load & validate the CSVs                                       #
+    # ------------------------------------------------------------------ #
     if not csv1 or not csv2:
         st.error("Cal carregar els dos CSV")
         st.stop()
@@ -575,40 +580,61 @@ if st.button("Executar sorteig"):
 
     try:
         validar_csv2(df2)
-        validar_csv_isard(df1) if especie == "Isard" else validar_csv_altres(df1)
+        (validar_csv_isard if especie == "Isard" else validar_csv_altres)(df1)
     except ValueError as e:
         st.error(str(e))
         st.stop()
 
+    # ------------------------------------------------------------------ #
+    # 2️⃣  IS‑TCC: detect hunters without Modalitat                       #
+    # ------------------------------------------------------------------ #
+    ids_to_skip = []      # ← will hold the IDs we really want to ignore
+
     if especie == "Isard":
         inscrits_tcc = df2[df2["Codi_Sorteig"] == "IS TCC"]
-        missing_mod = inscrits_tcc.merge(df1[["ID", "Modalitat"]], on="ID", how="left")
+        missing_mod = inscrits_tcc.merge(
+            df1[["ID", "Modalitat"]], on="ID", how="left"
+        )
         missing_mod = missing_mod[
             missing_mod["Modalitat"].isna()
             | (missing_mod["Modalitat"].astype(str).str.strip() == "")
         ]
-        if not missing_mod.empty:
+
+        # -- Ask the user what to do ------------------------------------
+        if not missing_mod.empty and not st.session_state.get("confirm_missing_mod", False):
             st.warning(
-                "Els següents caçadors s'han inscrit al TCC però no tenen modalitat especificada i s'ignoraran: "
+                "Els següents caçadors s'han inscrit al TCC però no tenen modalitat "
+                "especificada i s'ignoraran si continues: "
                 + ", ".join(missing_mod["ID"].astype(str))
             )
-            if not st.session_state.get("confirm_missing_mod", False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button(
-                        "Ignorar i continuar", key="confirm_missing_mod_btn"
-                    ):
-                        st.session_state["confirm_missing_mod"] = True
-                with col2:
-                    if st.button("Atura el procés", key="stop_missing_mod"):
-                        st.stop()
-                if not st.session_state.get("confirm_missing_mod", False):
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Ignorar i continuar", key="confirm_missing_mod_btn"):
+                    st.session_state["confirm_missing_mod"] = True
+                    st.session_state["ids_to_skip_tcc"] = missing_mod["ID"].tolist()
+                    st.experimental_rerun()
+            with col2:
+                if st.button("Atura el procés", key="stop_missing_mod"):
                     st.stop()
+            st.stop()   # wait until the user picks an option
 
-    # Build configuration from the dynamic inputs
+        # -- User already confirmed on a previous run -------------------
+        ids_to_skip = st.session_state.get("ids_to_skip_tcc", [])
+
+    # ------------------------------------------------------------------ #
+    # 3️⃣  Drop those IDs only from IS TCC                               #
+    # ------------------------------------------------------------------ #
+    if ids_to_skip:
+        mask = (df2["Codi_Sorteig"] == "IS TCC") & (df2["ID"].isin(ids_to_skip))
+        df2 = df2.loc[~mask].copy()
+
+    # ------------------------------------------------------------------ #
+    # 4️⃣  Build the configuration DataFrame from the UI inputs          #
+    # ------------------------------------------------------------------ #
     config_rows = []
     for sorteig in ESPECIE_SORTEIGS[especie]:
         key_prefix = sorteig.replace(" ", "_")
+
         if especie == "Isard" and sorteig == "IS TCC":
             total = st.session_state.get(f"total_{key_prefix}", 0)
             config_rows.append({
@@ -630,6 +656,9 @@ if st.button("Executar sorteig"):
 
     config_df = pd.DataFrame(config_rows)
 
+    # ------------------------------------------------------------------ #
+    # 5️⃣  Run the draw and show results                                 #
+    # ------------------------------------------------------------------ #
     try:
         resultat, resums = processar_sorteigs(df1, df2, config_df, especie, seed)
     except Exception as exc:
@@ -654,3 +683,9 @@ if st.button("Executar sorteig"):
             global_df = pd.concat(resums).groupby("Sorteig").sum(numeric_only=True)
             st.dataframe(global_df, use_container_width=True)
             st.bar_chart(global_df["Captures"])
+
+    # ------------------------------------------------------------------ #
+    # 6️⃣  Clean‑up session flags so next run starts fresh                #
+    # ------------------------------------------------------------------ #
+    st.session_state.pop("confirm_missing_mod", None)
+    st.session_state.pop("ids_to_skip_tcc", None)
