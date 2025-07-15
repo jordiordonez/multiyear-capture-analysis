@@ -251,6 +251,15 @@ def assignar_captura_parroquial_csv(
             parr_quota[parr] = int(round(total_caps * 0.5 * pct, 0))
     assignats_parr = {k: 0 for k in parr_quota}
 
+    # Límits per a estrangers
+    if "Estranger" in df.columns:
+        df["is_estranger"] = df["Estranger"].astype(str).str.strip().str.lower() == "sí"
+    else:
+        df["is_estranger"] = False
+    no_estrangers = (~df["is_estranger"]).sum()
+    estranger_cap = min(no_estrangers // 9, math.floor(total_caps / 10))
+    estrangers_assignats = 0
+
     for i, tipus in enumerate(tipus_captures, start=1):
         target = quantitats.get(tipus, 0)
         assigned = 0
@@ -270,22 +279,27 @@ def assignar_captura_parroquial_csv(
             else:
                 group = candidates
 
+            if estrangers_assignats >= estranger_cap:
+                group = group[~group["is_estranger"]]
+
             if unitat.startswith("V") and parr_quota:
                 group["quota"] = group["Parroquia"].apply(
                     lambda p: parr_quota.get(p, 0) - assignats_parr.get(p, 0)
                 )
-                group["quota_flag"] = group["quota"] > 0
-                order_cols = ["quota_flag", "rand"]
-                order_asc = [False, True]
+                group["quota_flag"] = group["quota"].apply(lambda q: 1 if q > 0 else 0)
+                order_cols = ["Prioritat", "quota_flag", "anys_sense_captura", "rand"]
+                order_asc = [True, False, False, True]
             else:
-                order_cols = ["rand"]
-                order_asc = [True]
+                order_cols = ["Prioritat", "anys_sense_captura", "rand"]
+                order_asc = [True, False, True]
 
             selected = group.sort_values(by=order_cols, ascending=order_asc).iloc[0]
             idx = selected.name
             df.at[idx, "Adjudicats"] += 1
             df.at[idx, col_name] += 1
             assigned += 1
+            if selected.get("is_estranger"):
+                estrangers_assignats += 1
             if unitat.startswith("V") and selected.get("Parroquia") in assignats_parr:
                 assignats_parr[selected["Parroquia"]] += 1
 
@@ -309,65 +323,62 @@ def assignar_captura_parroquial_csv(
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 # Instruccions d'ús en català
-with st.expander("Instruccions d'ús"):
+with st.expander("Instruccions d'ús", expanded=False):
     st.markdown(
         """
-        1. Seleccioneu l'espècie i la unitat de gestió.
-        2. Pugeu el fitxer CSV de sol·licitants.
-        3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran:
-           - Clic a "Afegeix Tipus"
-           - seleccioneu un o diversos valors
-           - indiqueu el nombre de captures.
-        4. Opcional: introduïu una llavor per reproduir el mateix sorteig.
-        5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
+1. **Seleccioneu l'espècie.**  
+2. **Configureu els sortejos:** per a cada **tipus** indiqueu el nombre de captures i si els sortejos s’han de fer en l’ordre dels tipus definits.  
+   - Feu clic a **“Afegeix Tipus”** per crear-ne de nous (podeu seleccionar diverses opcions per tipus).  
+3. **Pugeu** el **CSV de prioritats** i el **CSV d’inscrits** al sorteig.  
+4. *(Només per a Isard)* Els participants **sense modalitat** no participaran al **TCC**.  
+5. *(Opcional)* Introduïu una **llavor** per reproduir exactament el mateix sorteig.  
+6. Premeu **“Executar sorteig”** per obtenir i descarregar els resultats.
         """
     )
 
-with st.expander("Cas `Isard` amb `TCC`"):
+with st.expander("Cas `Isard`"):
     st.markdown(
         """
-        El fitxer CSV ha de contenir les següents columnes:
-        | Columna | Descripció |
-        |----------------------------------|--------------------------------------------|
-        | `ID` | Identificador únic del caçador |
-        | `Modalitat` | Modalitat d'inscripció (`A` = colla, `B` = individual) |
-        | `Colla_ID` | Identificador de la colla |
-        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
-        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
+El CSV de **prioritats** ha de contenir:
+
+| Columna              | Descripció                                                                 |
+|----------------------|------------------------------------------------------------------------------|
+| `ID`                 | Identificador únic del caçador                                               |
+| `Modalitat`          | `A` = colla, `B` = individual, `""` (buit) si **no** es vol participar al TCC |
+| `Colla_ID`           | Identificador de la colla (només si `Modalitat = A`)                         |
+| `Prioritat`          | Prioritat actual (1 = màxima)                                                |
+| `anys_sense_captura` | Anys consecutius sense captura                                               |
+| `Estranger`          | **Sí/No** – indica si el caçador és estranger                                |
         """
     )
 
 with st.expander("Altres espècies / unitats de gestió"):
     st.markdown(
         """
-        A més de les columnes anteriors, cal una columna per cada **tipus de captura disponible** amb el nombre de captures que es vol assignar. Si la unitat triada és un vedat (comença per `V`), el CSV ha d'incloure també la columna `Parroquia`.
+Per a la resta d'espècies o unitats de gestió el CSV és idèntic però **sense `Modalitat` ni `Colla_ID`**.
 
-        La configuració dels tipus de captura es fa a l'apartat següent de l'aplicació. Exemple:
-
-        | Columna | Exemple de valor |
-        |----------------------------------|------------------|
-        | `ID` | Identificador únic del caçador |
-        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
-        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
-        | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
-        | `Parroquia` | Si es tracta d'un Vedat |
-        
-        El sorteig comença adjudicant Tipus 1, i si existeix, després el Tipus 2, i així successivament fins a exhaurir els Tipus.
+| Columna              | Descripció                                          |
+|----------------------|-----------------------------------------------------|
+| `ID`                 | Identificador únic del caçador                      |
+| `Prioritat`          | Prioritat actual (1 = màxima)                       |
+| `anys_sense_captura` | Anys consecutius sense captura                      |
+| `Estranger`          | **Sí/No** – indica si el caçador és estranger       |
+| `Parroquia`          | Nom o codi de parròquia (obligatori si és un vedat) |
+| `<Tipus captura …>`  | Nombre de captures sol·licitades per tipus          |
         """
-
-        
     )
-
-with st.expander("Nota sobre les quotes parroquials en vedats"):
+with st.expander("Nota sobre les quotes parroquials i estrangers"):
     st.markdown(
         """
-        Quan es defineixen diversos tipus de captura per a un mateix vedat (per exemple, “Femella” i “Mascle+Trofeu”), la reserva del 50% de captures per a les parròquies s'aplica sobre la suma total de captures definides per al sorteig. Aquest percentatge es reparteix entre les parròquies afectades segons el percentatge establert per vedat.
+**Quotes parroquials (vedats)**  
+Quan un vedat té més d’un **tipus de captura** (p. ex. “Femella” i “Mascle+Trofeu”), es **reserva el 50 %** del total de captures per a les parròquies implicades, repartit segons els percentatges establerts per vedat.
 
-        ⚠️ Aquest 50% no és obligatòriament assolit. L'assignació de captures dins aquesta quota segueix les prioritats individuals dels caçadors. La condició per donar preferència a un caçador de la parròquia és:
-        - Que tingui la mateixa prioritat individual que altres sol·licitants.
-        - Que la seva parròquia no hagi assolit encara el percentatge corresponent dins del 50%.
+⚠️ Aquesta quota **no és obligatòria**: només s’aplica quan  
+1. El caçador local té la **mateixa prioritat** que un altre sol·licitant, **i**  
+2. La seva parròquia encara no ha assolit el percentatge que li correspon dins d’aquest 50 %.
 
-        Un cop es compleixen aquestes dues condicions, el sistema prioritza els caçadors locals fins a exhaurir la quota. Un cop superada, totes les captures es reparteixen exclusivament per prioritat individual.
+**Límit d’estrangers**  
+En cada sorteig hi ha un màxim del **10 %** de captures adjudicables a **caçadors estrangers**. Si el límit s’assoleix, la resta de captures es reparteixen exclusivament per prioritat individual.
         """
     )
 
@@ -453,12 +464,18 @@ if unidad.startswith("V"):
 
 
 # 3. Carrega CSV i vista prèvia
-df = None
-file = st.file_uploader("CSV sol·licitants", type="csv")
-if file:
-    df = pd.read_csv(file, sep=";")
-    st.subheader("Previsualització de sol·licitants")
-    st.dataframe(df)
+df_prior = None
+df_inscrits = None
+file_prior = st.file_uploader("CSV de prioritats", type="csv")
+file_inscrits = st.file_uploader("CSV d'inscrits", type="csv")
+if file_prior:
+    df_prior = pd.read_csv(file_prior, sep=";")
+    st.subheader("Previsualització de prioritats")
+    st.dataframe(df_prior)
+if file_inscrits:
+    df_inscrits = pd.read_csv(file_inscrits, sep=";")
+    st.subheader("Previsualització d'inscrits")
+    st.dataframe(df_inscrits)
 
 # 4. Configuració de Tipus de captura dinàmica
 options = [
@@ -507,8 +524,8 @@ seed = None if seed == 0 else seed
 
 # 5. Executar sorteig
 if st.button("Executar sorteig"):
-    if df is None:
-        st.warning("Cal pujar un CSV abans d'executar el sorteig.")
+    if df_prior is None or df_inscrits is None:
+        st.warning("Cal pujar els dos CSV abans d'executar el sorteig.")
     else:
         tipus_captures = []
         quantitats = {}
@@ -517,7 +534,10 @@ if st.button("Executar sorteig"):
                 st.warning("Cal especificar el nombre de captures.")
                 st.stop()
             try:
-                result = assignar_isards_sorteig_csv(df, total_cap, seed)
+                df_exec = df_prior[df_prior["Modalitat"].notna() & (df_prior["Modalitat"] != "")]
+                if df_inscrits is not None:
+                    df_exec = df_exec[~df_exec["ID"].isin(df_inscrits["ID"])]
+                result = assignar_isards_sorteig_csv(df_exec, total_cap, seed)
             except ValueError as e:
                 st.error(str(e))
                 st.stop()
@@ -528,8 +548,9 @@ if st.button("Executar sorteig"):
                 tipus_captures.append(val)
                 quantitats[val] = conf["qty"]
             try:
+                df_exec = pd.merge(df_prior, df_inscrits, on="ID", how="inner")
                 result = assignar_captura_parroquial_csv(
-                    df, tipus_captures, quantitats, unidad, seed
+                    df_exec, tipus_captures, quantitats, unidad, seed
                 )
             except ValueError as e:
                 st.error(str(e))
@@ -556,7 +577,7 @@ if st.button("Executar sorteig"):
             file_name=f"sorteig_{especie}_{unidad}.csv",
         )
 else:
-    if df is None:
+    if df_prior is None or df_inscrits is None:
         st.info("Puja un CSV per iniciar el sorteig.")
     else:
         if not (especie == "Isard" and unidad == "TCC"):
