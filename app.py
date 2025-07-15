@@ -412,35 +412,33 @@ with st.expander("Instruccions d'ús", expanded=False):
 with st.expander("Cas `Isard`"):
     st.markdown(
         """
-        El fitxer CSV ha de contenir les següents columnes:
-        | Columna | Descripció |
-        |----------------------------------|--------------------------------------------|
-        | `ID` | Identificador únic del caçador |
-        | `Modalitat` | Modalitat d'inscripció (`A` = colla, `B` = individual) |
-        | `Colla_ID` | Identificador de la colla |
-        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
-        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
+Per a l'espècie **isard**, el fitxer CSV de **prioritats** ha de tenir el següent format:
+
+| Columna              | Descripció                                                                 |
+|----------------------|------------------------------------------------------------------------------|
+| `ID`                 | Identificador únic del caçador                                               |
+| `Modalitat`          | `A` = colla, `B` = individual, `""` (buit) si **no** es vol participar al TCC |
+| `Colla_ID`           | Identificador de la colla (només si `Modalitat = A`)                         |
+| `Prioritat`          | Prioritat actual (1 = màxima)                                                |
+| `anys_sense_captura` | Nombre d’anys consecutius sense captura                                      |
+| `Estranger`          | **Sí/No** – indica si el caçador és estranger                                |
         """
     )
 
 with st.expander("Altres espècies / unitats de gestió"):
     st.markdown(
         """
-        A més de les columnes anteriors, cal una columna per cada **tipus de captura disponible** amb el nombre de captures que es vol assignar. Si la unitat triada és un vedat (comença per `V`), el CSV ha d'incloure també la columna `Parroquia`.
+Per a la resta d’espècies o unitats de gestió, el CSV té el mateix format però **sense les columnes `Modalitat` i `Colla_ID`**.
 
-        La configuració dels tipus de captura es fa a l'apartat següent de l'aplicació. Exemple:
-
-        | Columna | Exemple de valor |
-        |----------------------------------|------------------|
-        | `ID` | Identificador únic del caçador |
-        | `Prioritat` | Prioritat actual del caçador (nombre enter: 1 = màxima) |
-        | `anys_sense_captura` | Anys consecutius sense captura (nombre enter) |
-        | `Resultat_sorteigs_mateixa_sps` | Resultat acumulat de captures de la mateixa espècie en any en curs |
-        | `Parroquia` | Si es tracta d'un Vedat |
-        
-        El sorteig comença adjudicant Tipus 1, i si existeix, després el Tipus 2, i així successivament fins a exhaurir els Tipus.
+| Columna              | Descripció                                           |
+|----------------------|------------------------------------------------------|
+| `ID`                 | Identificador únic del caçador                       |
+| `Prioritat`          | Prioritat actual (1 = màxima)                        |
+| `anys_sense_captura` | Nombre d’anys consecutius sense captura              |
+| `Estranger`          | **Sí/No** – indica si el caçador és estranger        |
+| `Parroquia`          | Nom o codi de la parròquia (obligatori si és un vedat) |
+| `<Tipus captura …>`  | Nombre de captures sol·licitades per cada tipus      |
         """
-
     )
 
 with st.expander("Nota sobre les quotes parroquials en vedats"):
@@ -491,7 +489,7 @@ st.markdown("💡 Pots descarregar exemples de fitxers aquí:")
 
 with open("exemple1.csv", "rb") as f1:
     st.download_button(
-        label="📥 Exemple Isard TCC (exemple1.csv)",
+        label="📥 Exemple Isard (isard.csv)",
         data=f1,
         file_name="exemple1.csv",
         mime="text/csv",
@@ -499,9 +497,17 @@ with open("exemple1.csv", "rb") as f1:
 
 with open("exemple2.csv", "rb") as f2:
     st.download_button(
-        label="📥 Exemple altres espècies/unitats (exemple2.csv)",
+        label="📥 Altres espècies (altres.csv)",
         data=f2,
-        file_name="exemple2.csv",
+        file_name="altres.csv",
+        mime="text/csv",
+    )
+
+with open("sorteig.csv", "rb") as f3:
+    st.download_button(
+        label="📥 Exemple Inscripcions Sortejos (sorteig.csv)",
+        data=f3,
+        file_name="sorteig.csv",
         mime="text/csv",
     )
 
@@ -574,6 +580,18 @@ if st.button("Executar sorteig"):
     except ValueError as e:
         st.error(str(e))
         st.stop()
+
+    if especie == "Isard":
+        inscrits_tcc = df2[df2["Codi_Sorteig"] == "IS TCC"]
+        missing_mod = inscrits_tcc.merge(df1[["ID", "Modalitat"]], on="ID", how="left")
+        missing_mod = missing_mod[missing_mod["Modalitat"].isna() | (missing_mod["Modalitat"].astype(str).str.strip() == "")]
+        if not missing_mod.empty:
+            st.warning(
+                "Els següents caçadors s'han inscrit al TCC però no tenen modalitat especificada i s'ignoraran: "
+                + ", ".join(missing_mod["ID"].astype(str))
+            )
+            if not st.checkbox("Continuar sense tenir-los en compte", key="confirm_missing_mod"):
+                st.stop()
 
     # Build configuration from the dynamic inputs
     config_rows = []
