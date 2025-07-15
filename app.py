@@ -565,8 +565,17 @@ csv2 = st.file_uploader("CSV d'inscrits", type="csv", key="csv2")
 seed_input = st.number_input("Llavor opcional", value=0, step=1)
 seed = int(seed_input) if seed_input else None
 
+# Track whether the draw process should be executed across reruns
+st.session_state.setdefault("run_draw", False)
+
 # ─────────────────────  EXECUTAR SORTEIG  ────────────────────────────────
+# When the user presses the button we set a session flag so that
+# the computation can survive Streamlit reruns (e.g. when asking to
+# confirm missing modalities).
 if st.button("Executar sorteig"):
+    st.session_state["run_draw"] = True
+
+if st.session_state.get("run_draw"):
 
     # ------------------------------------------------------------------ #
     # 1️⃣  Load & validate the CSVs                                       #
@@ -689,3 +698,4 @@ if st.button("Executar sorteig"):
     # ------------------------------------------------------------------ #
     st.session_state.pop("confirm_missing_mod", None)
     st.session_state.pop("ids_to_skip_tcc", None)
+    st.session_state["run_draw"] = False
