@@ -129,7 +129,11 @@ def assignar_isards_sorteig_csv(
         idxs = sorted_g.index[:take]
         df.loc[idxs, "adjudicats"] += 1
         rem -= take
-    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
+    df["nova_prioritat"] = df.apply(
+        lambda r: 5 + r["adjudicats"] - 1 if r["adjudicats"] > 0 else r["Prioritat"],
+        axis=1,
+    )
+    df["nova_prioritat Any següent"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["adjudicats"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
@@ -190,10 +194,14 @@ def assignar_captura_csv(
     )
     # Calcular nova prioritat i anys sense captura
     df["nova_prioritat"] = df.apply(
-        lambda row: 4 if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else row["Prioritat"],
-    axis=1
+        lambda row: 5 + row["Nou_Resultat_sorteigs_mateixa_sps"] - 1
+        if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0
+        else row["Prioritat"],
+        axis=1,
     )
-    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(lambda x: 4 if x > 0 else 2)
+    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(
+        lambda x: 4 if x > 0 else 2
+    )
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
@@ -294,10 +302,14 @@ def assignar_captura_parroquial_csv(
     )
    # Calcular nova prioritat i anys sense captura
     df["nova_prioritat"] = df.apply(
-        lambda row: 4 if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else row["Prioritat"],
-    axis=1
+        lambda row: 5 + row["Nou_Resultat_sorteigs_mateixa_sps"] - 1
+        if row["Nou_Resultat_sorteigs_mateixa_sps"] > 0
+        else row["Prioritat"],
+        axis=1,
     )
-    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(lambda x: 4 if x > 0 else 2)
+    df["nova_prioritat Any següent"] = df["Nou_Resultat_sorteigs_mateixa_sps"].apply(
+        lambda x: 4 if x > 0 else 2
+    )
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["Nou_Resultat_sorteigs_mateixa_sps"] > 0 else r["anys_sense_captura"] + 1, axis=1
     )
@@ -309,21 +321,20 @@ def assignar_captura_parroquial_csv(
 # Streamlit UI
 st.title("App Sorteig Pla de Caça")
 # Instruccions d'ús en català
-with st.expander("Instruccions d'ús"):
+with st.expander("Instruccions d'ús", expanded=False):
     st.markdown(
         """
-        1. Seleccioneu l'espècie i la unitat de gestió.
-        2. Pugeu el fitxer CSV de sol·licitants.
-        3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran:
-           - Clic a "Afegeix Tipus"
-           - seleccioneu un o diversos valors
-           - indiqueu el nombre de captures.
-        4. Opcional: introduïu una llavor per reproduir el mateix sorteig.
-        5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
+1. **Seleccioneu l'espècie.**  
+2. **Configureu els sortejos:** per a cada **tipus** indiqueu el nombre de captures i si els sortejos s’han de fer en l’ordre dels tipus definits.  
+   - Feu clic a **“Afegeix Tipus”** per crear-ne de nous (podeu seleccionar diverses opcions per tipus).  
+3. **Pugeu** el **CSV de prioritats** i el **CSV d’inscrits** al sorteig.  
+4. *(Només per a Isard)* Els participants **sense modalitat** no participaran al **TCC**.  
+5. *(Opcional)* Introduïu una **llavor** per reproduir exactament el mateix sorteig.  
+6. Premeu **“Executar sorteig”** per obtenir i descarregar els resultats.
         """
     )
 
-with st.expander("Cas `Isard` amb `TCC`"):
+with st.expander("Cas `Isard`"):
     st.markdown(
         """
         El fitxer CSV ha de contenir les següents columnes:
