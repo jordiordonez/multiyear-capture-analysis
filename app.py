@@ -621,7 +621,7 @@ if st.session_state.get("run_draw"):
                 if st.button("Ignorar i continuar", key="confirm_missing_mod_btn"):
                     st.session_state["confirm_missing_mod"] = True
                     st.session_state["ids_to_skip_tcc"] = missing_mod["ID"].tolist()
-                    st.experimental_rerun()
+                    st.rerun()
             with col2:
                 if st.button("Atura el procés", key="stop_missing_mod"):
                     st.stop()
