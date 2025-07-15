@@ -583,14 +583,27 @@ if st.button("Executar sorteig"):
     if especie == "Isard":
         inscrits_tcc = df2[df2["Codi_Sorteig"] == "IS TCC"]
         missing_mod = inscrits_tcc.merge(df1[["ID", "Modalitat"]], on="ID", how="left")
-        missing_mod = missing_mod[missing_mod["Modalitat"].isna() | (missing_mod["Modalitat"].astype(str).str.strip() == "")]
+        missing_mod = missing_mod[
+            missing_mod["Modalitat"].isna()
+            | (missing_mod["Modalitat"].astype(str).str.strip() == "")
+        ]
         if not missing_mod.empty:
             st.warning(
                 "Els següents caçadors s'han inscrit al TCC però no tenen modalitat especificada i s'ignoraran: "
                 + ", ".join(missing_mod["ID"].astype(str))
             )
-            if not st.checkbox("Continuar sense tenir-los en compte", key="confirm_missing_mod"):
-                st.stop()
+            if not st.session_state.get("confirm_missing_mod", False):
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(
+                        "Ignorar i continuar", key="confirm_missing_mod_btn"
+                    ):
+                        st.session_state["confirm_missing_mod"] = True
+                with col2:
+                    if st.button("Atura el procés", key="stop_missing_mod"):
+                        st.stop()
+                if not st.session_state.get("confirm_missing_mod", False):
+                    st.stop()
 
     # Build configuration from the dynamic inputs
     config_rows = []
