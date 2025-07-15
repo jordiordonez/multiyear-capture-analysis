@@ -199,7 +199,13 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         extra = df1.loc[df1["Modalitat"].notna() & ~df1["ID"].isin(ids_totals), "ID"]
         ids_totals = np.union1d(ids_totals, extra)
     base = df1[df1["ID"].isin(ids_totals)].drop_duplicates("ID")
-    resultat = base[["ID", "Prioritat", "anys_sense_captura", "Estranger"]].copy()
+    if especie == "Isard":
+        resultat = base[["ID", "Modalitat", "Colla_ID",
+                         "Prioritat", "anys_sense_captura", "Estranger"]].copy()
+    else:
+        resultat = base[["ID", "Prioritat", "anys_sense_captura", "Estranger"]].copy()
+
+    captures_prev = {id_: 0 for id_ in resultat["ID"]}
     resum_sorteigs = []
 
     for sorteig in ESPECIE_SORTEIGS[especie]:
@@ -221,6 +227,11 @@ def processar_sorteigs(df1, df2, config, especie, seed):
             raise ValueError(f"ID duplicats al sorteig {sorteig}")
 
         part = subset.merge(df1, on="ID")
+        part["Prioritat"] = part.apply(
+            lambda r: (5 + captures_prev.get(r["ID"], 0) - 1)
+            if captures_prev.get(r["ID"], 0) > 0 else r["Prioritat"],
+            axis=1,
+        )
         if especie == "Isard" and sorteig == "IS TCC":
             part = part[part["Modalitat"].notna() & (part["Modalitat"] != "")]
         subset_ids = set(subset["ID"])
@@ -264,6 +275,11 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         mask_no_cap = resultat["ID"].isin(subset_ids) & resultat[col_base].isna()
         resultat.loc[mask_no_cap, col_base] = 0
         resultat[f"Tipus_{col_base}"] = resultat[f"tipus_{col_base}"]
+
+        winners = asignats.loc[asignats[f"ordre_{col_base}"].notna(), "ID"]
+        for wid in winners:
+            captures_prev[wid] = captures_prev.get(wid, 0) + 1
+
         resultat.drop(columns=[f"ordre_{col_base}", f"tipus_{col_base}"],
                       inplace=True)
         resultat[col_base] = resultat[col_base].astype("Int64")
@@ -473,14 +489,10 @@ with st.expander("Parròquies"):
 with st.expander("Columnes del fitxer de resultats"):
     st.markdown(
         """
-        El CSV resultants inclou:
-        - `Adjudicats`: nombre total de captures assignades al caçador.
-        - Columnes `Adjudicats_TipusX_<nom>` per a cada tipus de captura.
-        - `Nou_Resultat_sorteigs_mateixa_sps`: suma acumulada de captures d'aquesta espècie.
-        - `nova_prioritat`: prioritat a utilitzar si es repeteix sorteig de la mateixa espècie durant l'any actual.
-        - `nova_prioritat Any següent`: prioritat que es tindrà en compte per a la temporada següent.
-
-        Si cal fer un altre sorteig de la mateixa espècie en el mateix any, torneu a carregar el CSV generat i substituïu `Prioritat` per `nova_prioritat` i `Resultat_sorteigs_mateixa_sps` per `Nou_Resultat_sorteigs_mateixa_sps`. A l'inici de cada temporada s'hauran d'actualitzar manualment els caçadors de prioritat 1 segons si havien abatut una femella l'any anterior.
+        El CSV resultants inclou, per a cada `ID`:
+        - Per a cada codi de sorteig, la posició on s'ha adjudicat la captura. Si el caçador estava inscrit i no ha obtingut plaça apareix `0`; si no estava inscrit el valor és buit.
+        - Les columnes `Tipus_<codi>` indiquen el tipus de captura assignat en cada sorteig.
+        - `Nou_Anys_sense_captura` i `Nova_prioritat` amb els valors resultants després de tots els sortejos.
         """
     )
 
