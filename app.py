@@ -421,6 +421,7 @@ Per a l'espècie **isard**, el fitxer CSV de **prioritats** ha de tenir el segü
 | `Colla_ID`           | Identificador de la colla (només si `Modalitat = A`)                         |
 | `Prioritat`          | Prioritat actual (1 = màxima)                                                |
 | `anys_sense_captura` | Nombre d’anys consecutius sense captura                                      |
+| `Parroquia`          | Nom o codi de la parròquia (obligatori si és un vedat) |
 | `Estranger`          | **Sí/No** – indica si el caçador és estranger                                |
         """
     )
@@ -436,8 +437,6 @@ Per a la resta d’espècies o unitats de gestió, el CSV té el mateix format p
 | `Prioritat`          | Prioritat actual (1 = màxima)                        |
 | `anys_sense_captura` | Nombre d’anys consecutius sense captura              |
 | `Estranger`          | **Sí/No** – indica si el caçador és estranger        |
-| `Parroquia`          | Nom o codi de la parròquia (obligatori si és un vedat) |
-| `<Tipus captura …>`  | Nombre de captures sol·licitades per cada tipus      |
         """
     )
 
@@ -487,15 +486,15 @@ with st.expander("Columnes del fitxer de resultats"):
 
 st.markdown("💡 Pots descarregar exemples de fitxers aquí:")
 
-with open("exemple1.csv", "rb") as f1:
+with open("isard.csv", "rb") as f1:
     st.download_button(
         label="📥 Exemple Isard (isard.csv)",
         data=f1,
-        file_name="exemple1.csv",
+        file_name="isard.csv",
         mime="text/csv",
     )
 
-with open("exemple2.csv", "rb") as f2:
+with open("altres.csv", "rb") as f2:
     st.download_button(
         label="📥 Altres espècies (altres.csv)",
         data=f2,
