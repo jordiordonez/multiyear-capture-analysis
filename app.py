@@ -87,12 +87,13 @@ def validar_csv2(df):
 # ── HELPER: CHOOSE NEXT CANDIDATE ────────────────────────────────────────────
 
 def tria_candidat(df, assigned, estr_cnt, assignats,
-                  vedat, assignats_parr, rng):
+                  vedat, assignats_parr, rng, total_caps):
     pool = df[~df["ID"].isin(assigned)].copy()
     if pool.empty:
         return None
 
-    limit = math.floor(0.10 * max(len(df), assignats))
+    non_strangers = len(df[df["Estranger"] == "no"])
+    limit = min(math.floor(non_strangers / 9), math.floor(0.1 * total_caps))
     if estr_cnt >= limit:
         pool = pool[pool["Estranger"] == "no"]
     if pool.empty:
@@ -103,10 +104,10 @@ def tria_candidat(df, assigned, estr_cnt, assignats,
     if vedat and vedat in VEDAT_PARRÒQUIES:
         quotas = VEDAT_PARRÒQUIES[vedat]
         pool["quota_flag"] = pool["Parroquia"].apply(
-            lambda p: quotas.get(p, 0) - assignats_parr.get(p, 0) > 0
+            lambda p: 1 if quotas.get(p, 0) - assignats_parr.get(p, 0) > 0 else 0
         )
-        order_cols, asc = ["quota_flag", "Prioritat",
-                           "anys_sense_captura", "rand"], [False, True, False, True]
+        order_cols, asc = ["Prioritat", "quota_flag",
+                           "anys_sense_captura", "rand"], [True, False, False, True]
     else:
         order_cols, asc = ["Prioritat", "anys_sense_captura", "rand"], [True, False, True]
 
@@ -125,6 +126,7 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
     assignats_parr = {k: 0 for k in VEDAT_PARRÒQUIES.get(vedat, {})}
 
     captures_pool = [t for t, q in tipus_quant for _ in range(q)]
+    total_caps = len(captures_pool)
     if not ordre_aleatori:
         captures_pool = captures_pool.copy()   # keep deterministic order
 
@@ -132,9 +134,11 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
 
     if ordre_aleatori:
         while captures_pool and not df.loc[~df["assigned"]].empty:
-            idx = tria_candidat(df, set(df[df["assigned"]]["ID"]),
-                                estrangers, assignats, vedat,
-                                assignats_parr, rng)
+            idx = tria_candidat(
+                df, set(df[df["assigned"]]["ID"]),
+                estrangers, assignats, vedat,
+                assignats_parr, rng, total_caps
+            )
             if idx is None:
                 break
             tipus = rng.choice(captures_pool)
@@ -151,9 +155,11 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
     else:
         for tipus, q in tipus_quant:
             for _ in range(q):
-                idx = tria_candidat(df, set(df[df["assigned"]]["ID"]),
-                                    estrangers, assignats, vedat,
-                                    assignats_parr, rng)
+                idx = tria_candidat(
+                    df, set(df[df["assigned"]]["ID"]),
+                    estrangers, assignats, vedat,
+                    assignats_parr, rng, total_caps
+                )
                 if idx is None:
                     break
                 df.loc[idx, ["assigned", "ordre", "tipus"]] = [True, ordre, tipus]
@@ -189,6 +195,9 @@ def processar_sorteigs(df1, df2, config, especie, seed):
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
 
     ids_totals = df2["ID"].unique()
+    if especie == "Isard":
+        extra = df1.loc[df1["Modalitat"].notna() & ~df1["ID"].isin(ids_totals), "ID"]
+        ids_totals = np.union1d(ids_totals, extra)
     base = df1[df1["ID"].isin(ids_totals)].drop_duplicates("ID")
     resultat = base[["ID", "Prioritat", "anys_sense_captura", "Estranger"]].copy()
     resum_sorteigs = []
@@ -201,13 +210,19 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         resultat[col_base] = np.nan
         resultat[f"Tipus_{col_base}"] = np.nan
 
-        subset = df2[df2["Codi_Sorteig"] == sorteig]
+        subset = df2[df2["Codi_Sorteig"] == sorteig].copy()
+        if especie == "Isard" and sorteig == "IS TCC":
+            extra_ids = df1.loc[df1["Modalitat"].notna() & ~df1["ID"].isin(df2["ID"]), "ID"]
+            if not extra_ids.empty:
+                subset = pd.concat([subset, pd.DataFrame({"ID": extra_ids, "Codi_Sorteig": sorteig})], ignore_index=True)
         if subset.empty or conf_rows.empty:
             continue
         if subset["ID"].duplicated().any():
             raise ValueError(f"ID duplicats al sorteig {sorteig}")
 
         part = subset.merge(df1, on="ID")
+        if especie == "Isard" and sorteig == "IS TCC":
+            part = part[part["Modalitat"].notna() & (part["Modalitat"] != "")]
         subset_ids = set(subset["ID"])
 
         if especie == "Isard" and sorteig == "IS TCC":
@@ -360,7 +375,11 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
             df.at[idx, "adjudicats"] = 1
         rem -= len(idxs)
 
-    df["nova_prioritat"] = df["adjudicats"].apply(lambda x: 4 if x else 2)
+    df["nova_prioritat"] = df.apply(
+        lambda r: 5 + r["adjudicats"] - 1 if r["adjudicats"] > 0 else r["Prioritat"],
+        axis=1,
+    )
+    df["nova_prioritat Any següent"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["adjudicats"] else r["anys_sense_captura"] + 1, axis=1
     )
@@ -377,21 +396,20 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
 st.title("App Sorteig Pla de Caça")
 
 # Instruccions d'ús en català
-with st.expander("Instruccions d'ús"):
+with st.expander("Instruccions d'ús", expanded=False):
     st.markdown(
         """
-        1. Seleccioneu l'espècie i la unitat de gestió.
-        2. Pugeu el fitxer CSV de sol·licitants.
-        3. Si no és Isard + TCC, afegiu un o més Tipus de captura en l'ordre que es sortejaran:
-           - Clic a "Afegeix Tipus"
-           - seleccioneu un o diversos valors
-           - indiqueu el nombre de captures.
-        4. Opcional: introduïu una llavor per reproduir el mateix sorteig.
-        5. Feu clic a "Executar sorteig" per veure els resultats i descarregar el CSV.
+1. **Seleccioneu l'espècie.**  
+2. **Configureu els sortejos:** per a cada **tipus** indiqueu el nombre de captures i si els sortejos s’han de fer en l’ordre dels tipus definits.  
+   - Feu clic a **“Afegeix Tipus”** per crear-ne de nous (podeu seleccionar diverses opcions per tipus).  
+3. **Pugeu** el **CSV de prioritats** i el **CSV d’inscrits** al sorteig.  
+4. *(Només per a Isard)* Els participants **sense modalitat** no participaran al **TCC**.  
+5. *(Opcional)* Introduïu una **llavor** per reproduir exactament el mateix sorteig.  
+6. Premeu **“Executar sorteig”** per obtenir i descarregar els resultats.
         """
     )
 
-with st.expander("Cas `Isard` amb `TCC`"):
+with st.expander("Cas `Isard`"):
     st.markdown(
         """
         El fitxer CSV ha de contenir les següents columnes:
@@ -536,8 +554,8 @@ with st.expander("Configuració de captures per sorteig"):
 
                 st.session_state[cfg_key][idx] = {"selections": sel, "qty": qty}
 
-csv1 = st.file_uploader("CSV principal", type="csv", key="csv1")
-csv2 = st.file_uploader("CSV de sorteigs", type="csv", key="csv2")
+csv1 = st.file_uploader("CSV de prioritats", type="csv", key="csv1")
+csv2 = st.file_uploader("CSV d'inscrits", type="csv", key="csv2")
 
 seed_input = st.number_input("Llavor opcional", value=0, step=1)
 seed = int(seed_input) if seed_input else None
