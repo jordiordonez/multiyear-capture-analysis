@@ -53,12 +53,13 @@ def normalitza_parroquia(valor):
             return name
     return None
 
-
 def normalitza_estranger(valor) -> str:
-    if isinstance(valor, str) and valor.strip().lower() in {"si", "sí", "s", "yes", "true", "1"}:
+    if not isinstance(valor, str):
+        return "no"
+    txt = valor.strip().lower().replace("í", "i")  # ← millora clau
+    if txt in {"si", "s", "yes", "true", "1"}:
         return "si"
     return "no"
-
 
 # ── CSV VALIDATION HELPERS ───────────────────────────────────────────────────
 
@@ -334,11 +335,25 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
         raise ValueError(f"Falten columnes: {required - set(df.columns)}")
 
     df = df.copy()
+    df["Estranger"] = df["Estranger"].apply(normalitza_estranger)
     df["adjudicats"] = 0
     df["ordre"] = np.nan
+    df["eligible"] = True  # Nou: marca si pot rebre captura
+
+    # Calcular límit d’estrangers
+    total_non_strangers = (df["Estranger"] == "no").sum()
+    estranger_limit = min(math.floor(total_non_strangers / 9), math.floor(0.1 * total_captures))
+
+    # Marcar com a no elegibles els estrangers que excedeixen el límit
+    estrangers = df[df["Estranger"] == "si"].sample(frac=1, random_state=rng)
+    if len(estrangers) > estranger_limit:
+        ineligibles = estrangers.iloc[estranger_limit:]
+        df.loc[ineligibles.index, "eligible"] = False
+
     ordre_counter = 1
     df_colla, df_indiv = df[df["Modalitat"] == "A"], df[df["Modalitat"] == "B"]
 
+    # Important: ratio i repartiment es fan amb tots els membres
     total_applicants = len(df_colla) + len(df_indiv)
     ratio = math.ceil(total_applicants / total_captures)
     n_indiv = round(total_captures * len(df_indiv) / total_applicants)
@@ -350,8 +365,7 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     leftover = n_colla - colles["assignats"].sum()
     for _ in range(leftover):
         colles["rati"] = colles["assignats"] / colles["caçadors"]
-        cid = colles.loc[np.isclose(colles["rati"],
-                                    colles["rati"].min())]\
+        cid = colles.loc[np.isclose(colles["rati"], colles["rati"].min())]\
                      .sample(1, random_state=rng)["Colla_ID"].iat[0]
         colles.loc[colles["Colla_ID"] == cid, "assignats"] += 1
 
@@ -359,7 +373,7 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
         cid, to_assign = row["Colla_ID"], int(row["assignats"])
         while to_assign:
             sub = df[(df["Modalitat"] == "A") & (df["Colla_ID"] == cid)]
-            group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
+            group = sub[(sub["adjudicats"] == sub["adjudicats"].min()) & (sub["eligible"])].copy()
             group["rand"] = rng.random(len(group))
             idxs = group.sort_values([
                 "Prioritat",
@@ -376,7 +390,7 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     # assign individuals
     rem = n_indiv
     while rem:
-        sub = df[df["Modalitat"] == "B"]
+        sub = df[(df["Modalitat"] == "B") & (df["eligible"])]
         group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
         group["rand"] = rng.random(len(group))
         idxs = group.sort_values([
@@ -401,7 +415,6 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     )
     df["ordre"] = df["ordre"].astype("Int64")
     return df
-
 
 # ── (Additional helper functions assignar_captura_csv & assignar_captura_parroquial_csv unchanged) ──
 #    ↳ They are long but identical to what you pasted, no structural fix needed.
