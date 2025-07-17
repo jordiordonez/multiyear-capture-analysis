@@ -424,10 +424,11 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
 st.markdown(
     """
     <style>
-    /* Hide the header where Streamlit shows its built-in page tabs */
+    /* Hide Streamlit's default page navigation */
     header[data-testid="stHeader"] {display: none;}
-    /* Also hide the left-sidebar page list (old navigation style) */
-    section[data-testid="stSidebarNav"] {display: none;}
+    section[data-testid="stSidebarNav"],
+    nav[data-testid="stSidebarNav"],
+    ul[data-testid="stSidebarNavItems"] {display: none;}
     </style>
     """,
     unsafe_allow_html=True
