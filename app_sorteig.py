@@ -2,6 +2,7 @@ import math  # ← NEW: for ceil, floor, isnan
 import pandas as pd
 import numpy as np
 import streamlit as st
+import unicodedata
 from collections import OrderedDict
 from streamlit_option_menu import option_menu  # pip install streamlit-option-menu
 import plotly.express as px
@@ -53,6 +54,13 @@ TIPUS_OPTIONS = [
 # ── UTILITIES ────────────────────────────────────────────────────────────────
 
 
+def strip_accents(text: str) -> str:
+    """Remove diacritics for easier matching."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    )
+
+
 def normalitza_parroquia(valor):
     CODI_PARROQUIES = {
         1: "Canillo",
@@ -65,17 +73,13 @@ def normalitza_parroquia(valor):
     }
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return None
-    txt = str(valor).strip()
+    txt = strip_accents(str(valor).strip()).lower()
     if txt.isdigit():
         return CODI_PARROQUIES.get(int(txt))
-    txt = (
-        txt.lower()
-        .replace("-", " ")
-        .replace("_", " ")
-        .replace("sj", "Sant Julià de Lòria")
-    )
+    txt = txt.replace("-", " ").replace("_", " ").replace("sj", "sant julia de loria")
     for name in CODI_PARROQUIES.values():
-        if name.lower() in txt:
+        canonical = strip_accents(name).lower().replace("-", " ")
+        if canonical in txt:
             return name
     return None
 

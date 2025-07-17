@@ -59,17 +59,13 @@ def normalize_parroquia(value):
     }
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return None
-    txt = str(value).strip()
+    txt = strip_accents(str(value).strip()).lower()
     if txt.isdigit():
         return CODI_PARROQUIES.get(int(txt))
-    txt = (
-        txt.lower()
-        .replace("-", " ")
-        .replace("_", " ")
-        .replace("sj", "Sant Julià de Lòria")
-    )
+    txt = txt.replace("-", " ").replace("_", " ").replace("sj", "sant julia de loria")
     for name in CODI_PARROQUIES.values():
-        if name.lower() in txt:
+        canonical = strip_accents(name).lower().replace("-", " ")
+        if canonical in txt:
             return name
     return None
 
