@@ -65,12 +65,25 @@ def build_summaries(resultat_df: pd.DataFrame,
     else:
         summary = standardize_columns(resultat_df)
     for col in ['Assignacions_previstes', 'Assignacions_finals', 'Sol_licituds']:
-        if col in summary.columns:
-            summary[col] = pd.to_numeric(summary[col], errors='coerce').fillna(0).astype(int)
-    summary_tipus = summary.groupby(['Sorteig', 'Tipus'], as_index=False)[
-        'Assignacions_finals'].sum()
-    summary_totals = summary.groupby('Sorteig', as_index=False)[
-        ['Assignacions_previstes', 'Assignacions_finals', 'Sol_licituds']].sum()
+        if col not in summary.columns:
+            summary[col] = 0
+        summary[col] = pd.to_numeric(summary[col], errors='coerce').fillna(0).astype(int)
+    # group only when the required columns are present
+    if {'Sorteig', 'Tipus'}.issubset(summary.columns):
+        summary_tipus = summary.groupby(['Sorteig', 'Tipus'], as_index=False)[
+            'Assignacions_finals'].sum()
+    else:
+        summary_tipus = pd.DataFrame(columns=['Sorteig', 'Tipus',
+                                             'Assignacions_finals'])
+
+    if 'Sorteig' in summary.columns:
+        summary_totals = summary.groupby('Sorteig', as_index=False)[
+            ['Assignacions_previstes',
+             'Assignacions_finals', 'Sol_licituds']].sum()
+    else:
+        summary_totals = pd.DataFrame(columns=['Sorteig',
+            'Assignacions_previstes', 'Assignacions_finals', 'Sol_licituds'])
+
     return summary_totals, summary_tipus
 
 
