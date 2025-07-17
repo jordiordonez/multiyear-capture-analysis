@@ -6,23 +6,25 @@ from streamlit_option_menu import option_menu
 import unicodedata
 import math
 
-COLOR_FORECAST = "#d9d9d9"
-COLOR_APPS_BELOW = "#ff7f0e"
-COLOR_APPS_ABOVE = "#d62728"
+# Use a single strong blue for most dimensions
+COLOR_BLUE = "#1f77b4"
+COLOR_FORECAST = "#000000"
+COLOR_APPS_BELOW = "#000000"
+COLOR_APPS_ABOVE = "#000000"
 TIPUS_COLORS = {
-    "General": "#1f77b4",
+    "General": COLOR_BLUE,
     "Reserva": "#2ca02c",
-    "Altres": "#9467bd",
+    "Altres": "#ff7f0e",
 }
-ESTRANGER_COLORS = {"Si": "#d62728", "No": "#1f77b4"}
+ESTRANGER_COLORS = {"Si": COLOR_BLUE, "No": COLOR_BLUE}
 PARROQUIA_COLORS = {
-    "Andorra la Vella": "#2ca02c",
-    "Escaldes-Engordany": "#ff7f0e",
-    "Encamp": "#17becf",
-    "La Massana": "#bcbd22",
-    "Ordino": "#8c564b",
-    "Canillo": "#e377c2",
-    "Sant Julià de Lòria": "#7f7f7f",
+    "Andorra la Vella": COLOR_BLUE,
+    "Escaldes-Engordany": COLOR_BLUE,
+    "Encamp": COLOR_BLUE,
+    "La Massana": COLOR_BLUE,
+    "Ordino": COLOR_BLUE,
+    "Canillo": COLOR_BLUE,
+    "Sant Julià de Lòria": COLOR_BLUE,
 }
 
 
@@ -221,17 +223,12 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
         cumulative += vals
     for idx, row in totals.iterrows():
         if "Sol_licituds" in row:
-            color = (
-                COLOR_APPS_BELOW
-                if row["Sol_licituds"] <= row["Assignacions_previstes"]
-                else COLOR_APPS_ABOVE
-            )
             fig.add_trace(
                 go.Scatter(
                     x=[0, row["Sol_licituds"]],
                     y=[row["Sorteig"], row["Sorteig"]],
                     mode="lines",
-                    line=dict(color=color, width=3),
+                    line=dict(color="black", width=3),
                     name="Sol·licituds" if idx == 0 else None,
                     showlegend=(idx == 0),
                 )
@@ -286,9 +283,11 @@ def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | Non
     if dim == "Tipus":
         colors = [TIPUS_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
     elif dim == "Estranger":
-        colors = [ESTRANGER_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
+        colors = [COLOR_BLUE for _ in assign_grp[dim_col]]
     elif dim == "Parròquia":
-        colors = [PARROQUIA_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
+        colors = [COLOR_BLUE for _ in assign_grp[dim_col]]
+    elif dim == "Prioritat":
+        colors = [COLOR_BLUE for _ in assign_grp[dim_col]]
 
     fig = go.Figure(
         go.Bar(
@@ -302,21 +301,12 @@ def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | Non
 
     show_leg = True
     for _, r in apps_grp.iterrows():
-        color = None
-        if dim == "Tipus":
-            color = TIPUS_COLORS.get(r[dim_col], "#555")
-        elif dim == "Estranger":
-            color = ESTRANGER_COLORS.get(r[dim_col], "#555")
-        elif dim == "Parròquia":
-            color = PARROQUIA_COLORS.get(r[dim_col], "#555")
-        else:
-            color = "#555"
         fig.add_trace(
             go.Scatter(
                 x=[0, r["Sol_licituds"]],
                 y=[r[dim_col], r[dim_col]],
                 mode="lines",
-                line=dict(color=color, width=3),
+                line=dict(color="black", width=3),
                 name="Sol·licituds" if show_leg else None,
                 showlegend=show_leg,
             )
@@ -350,6 +340,7 @@ def main():
         section[data-testid="stSidebarNav"],
         nav[data-testid="stSidebarNav"],
         ul[data-testid="stSidebarNavItems"] {display: none;}
+        body {color: black;}
         </style>
         """,
         unsafe_allow_html=True,
