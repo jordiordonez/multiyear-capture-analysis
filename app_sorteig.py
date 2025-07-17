@@ -409,6 +409,18 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
 
 
 # ── STREAMLIT UI ─────────────────────────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+    /* Hide the header where Streamlit shows its built-in page tabs */
+    header[data-testid="stHeader"] {display: none;}
+    /* Also hide the left-sidebar page list (old navigation style) */
+    section[data-testid="stSidebarNav"] {display: none;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 with st.sidebar:
     section = option_menu(
         "Menú",
@@ -418,7 +430,7 @@ with st.sidebar:
     )
     st.session_state["section"] = section  # remember choice
 
-if st.session_state.get("section") == "📊 Dashboard":
+if st.session_state.get("section") == "Dashboard":
     st.switch_page("pages/Dashboard.py")
 st.title("App Sorteig Pla de Caça")
 

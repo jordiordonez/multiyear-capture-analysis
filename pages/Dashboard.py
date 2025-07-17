@@ -3,6 +3,17 @@ import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="📊 Resultats sorteig", layout="wide")
+st.markdown(
+    """
+    <style>
+    /* Hide the header where Streamlit shows its built-in page tabs */
+    header[data-testid="stHeader"] {display: none;}
+    /* Also hide the left-sidebar page list (old navigation style) */
+    section[data-testid="stSidebarNav"] {display: none;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # 1️⃣  Grab the objects produced in the main app
 if "resultat" not in st.session_state or "resums" not in st.session_state:
