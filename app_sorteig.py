@@ -301,6 +301,7 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         if subset["ID"].duplicated().any():
             raise ValueError(f"ID duplicats al sorteig {sorteig}")
 
+        sol_licituds_total = subset["ID"].nunique()
         part = subset.merge(df1, on="ID")
         part["Prioritat"] = part.apply(
             lambda r: (
@@ -382,7 +383,7 @@ def processar_sorteigs(df1, df2, config, especie, seed):
                 r["Quantitat"]
             )
 
-        sol_licituds = len(subset_ids)
+        sol_licituds = sol_licituds_total
         resum_rows = []
         for t in set(previs_counts) | set(tipus_counts):
             resum_rows.append(

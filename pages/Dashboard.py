@@ -338,11 +338,10 @@ def main():
 
     st.title("📊 Resultats del sorteig")
 
+    total_apps = len(df)
     if data.empty:
         st.info("No hi ha dades després dels filtres.")
         return
-
-    total_apps = len(data)
     prev = totals_filt["Assignacions_previstes"].sum()
     # Recalculate finals from the *filtered participant* rows so percentages
     # reflect the applied filters rather than overall totals.
