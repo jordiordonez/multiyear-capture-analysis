@@ -161,29 +161,6 @@ def recalc_filtered_summaries(
     return pd.DataFrame(rows_tot), pd.DataFrame(rows_det)
 
 
-def load_demo():
-    df = pd.DataFrame(
-        {
-            "Sorteig": ["S1"] * 20 + ["S2"] * 15,
-            "Tipus": ["General"] * 15
-            + ["Reserva"] * 5
-            + ["General"] * 10
-            + ["Altres"] * 5,
-            "Estranger": ["No"] * 25 + ["Si"] * 10,
-            "Modalitat": ["A"] * 20 + ["B"] * 15,
-            "Parroquia": ["Andorra la Vella"] * 10
-            + ["La Massana"] * 10
-            + ["Encamp"] * 15,
-            "Prioritat": np.random.randint(1, 5, size=35),
-            "Assignacions_previstes": [12] * 20 + [10] * 15,
-            "Assignacions_finals": [1] * 12 + [0] * 8 + [1] * 10 + [0] * 5,
-            "Sol_licituds": [20] * 20 + [15] * 15,
-        }
-    )
-    st.session_state["resultat"] = df
-    st.session_state["resums"] = []
-
-
 def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
     sorteigs = totals["Sorteig"]
     pivot = details.pivot_table(
@@ -361,10 +338,7 @@ def main():
 
     if "resultat" not in st.session_state:
         st.error("⚠️ Primer executa un sorteig des de la pestanya «🎲 Sorteig».")
-        if st.button("Carregar demo"):
-            load_demo()
-        else:
-            return
+        return
     df = standardize_columns(st.session_state["resultat"])
     if "Estranger" in df.columns:
         df["Estranger"] = df["Estranger"].apply(normalize_estranger)
@@ -405,12 +379,12 @@ def main():
 
     st.title("📊 Resultats del sorteig")
 
-    total_apps = len(data)
-    if data.empty:
+    total_apps = int(totals_filt["Sol_licituds"].sum())
+    if total_apps == 0:
         st.info("No hi ha dades després dels filtres.")
         return
-    prev = totals_filt["Assignacions_previstes"].sum()
-    finals = totals_filt["Assignacions_finals"].sum()
+    prev = int(totals_filt["Assignacions_previstes"].sum())
+    finals = int(totals_filt["Assignacions_finals"].sum())
     k1, k2, k3 = st.columns(3)
     k1.metric("Sol·licituds totals", f"{total_apps:,}")
     k2.metric("Assignacions previstes", f"{prev:,}")
@@ -443,17 +417,26 @@ def main():
     if not dim_options:
         dim_options = ["Tipus"]  # fallback to keep radio alive
     dim = st.radio("Desglossament", dim_options, horizontal=True)
+
+    assign_cols = [s.replace(" ", "_") for s in sel if s.replace(" ", "_") in data.columns]
+
     if dim == "Tipus":
         drill_data = details_filt
     else:
         _dim_col = {"Parròquia": "Parroquia"}.get(dim, dim)
-        if _dim_col in data.columns:
-            _grp = data.groupby(_dim_col, as_index=False).size()
+        if _dim_col in data.columns and assign_cols:
+            assigned = data.loc[data[assign_cols].gt(0).any(axis=1)]
+            _grp = assigned.groupby(_dim_col, as_index=False).size()
             _grp = _grp.rename(columns={"size": "Assignacions_finals"})
             drill_data = _grp
         else:
-            drill_data = pd.DataFrame(columns=["Assignacions_finals", _dim_col])
-    drill_fig = plot_drill(drill_data, dim, data)
+            drill_data = pd.DataFrame(columns=[_dim_col, "Assignacions_finals"])
+
+    app_data = data
+    if assign_cols:
+        app_data = data.loc[data[assign_cols].notna().any(axis=1)]
+
+    drill_fig = plot_drill(drill_data, dim, app_data)
     st.plotly_chart(drill_fig, use_container_width=True)
 
     with st.expander("Dades filtrades"):
