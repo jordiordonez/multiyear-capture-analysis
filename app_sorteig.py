@@ -51,6 +51,13 @@ TIPUS_OPTIONS = [
 ]
 
 
+def sanitize_indeterminat(key: str) -> None:
+    """Ensure multiselect keeps only 'Indeterminat' if chosen."""
+    val = st.session_state.get(key, [])
+    if "Indeterminat" in val and len(val) > 1:
+        st.session_state[key] = ["Indeterminat"]
+
+
 # ── UTILITIES ────────────────────────────────────────────────────────────────
 
 
@@ -698,12 +705,14 @@ with st.expander("Configuració de captures per sorteig"):
                 sel_key = f"{key_prefix}_sel_{idx}"
                 if sel_key not in st.session_state:
                     st.session_state[sel_key] = conf["selections"]
-                sel = st.multiselect(
-                    f"Valors Tipus {idx+1}", TIPUS_OPTIONS, key=sel_key
+                st.multiselect(
+                    f"Valors Tipus {idx+1}",
+                    TIPUS_OPTIONS,
+                    key=sel_key,
+                    on_change=sanitize_indeterminat,
+                    args=(sel_key,),
                 )
-                if "Indeterminat" in sel:
-                    sel = ["Indeterminat"]
-                    st.session_state[sel_key] = sel
+                sel = st.session_state.get(sel_key, [])
 
                 qty_key = f"{key_prefix}_qty_{idx}"
                 if qty_key not in st.session_state:

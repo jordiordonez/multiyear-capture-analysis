@@ -13,7 +13,7 @@ COLOR_APPS_BELOW = "#000000"
 COLOR_APPS_ABOVE = "#000000"
 TIPUS_COLORS = {
     "General": COLOR_BLUE,
-    "Reserva (red)": "#d62728",   # strong red, same family as "#1f77b4"
+    "Reserva (red)": "#d62728",  # strong red, same family as "#1f77b4"
     "Altres (orange)": "#ff7f0e",
 }
 ESTRANGER_COLORS = {"Si": COLOR_BLUE, "No": COLOR_BLUE}
@@ -195,18 +195,6 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
     )
     pivot = pivot.reindex(sorteigs)
     fig = go.Figure()
-    if "Assignacions_previstes" in totals.columns:
-        fig.add_trace(
-            go.Bar(
-                x=totals["Assignacions_previstes"],
-                y=totals["Sorteig"],
-                orientation="h",
-                marker_color="rgba(0,0,0,0)",
-                marker_line_color=COLOR_FORECAST,
-                marker_line_width=4,
-                name="Previstes",
-            )
-        )
     cumulative = np.zeros(len(pivot))
     for tip in pivot.columns:
         vals = pivot[tip].values
@@ -233,6 +221,19 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
                     showlegend=(idx == 0),
                 )
             )
+
+    if "Assignacions_previstes" in totals.columns:
+        fig.add_trace(
+            go.Bar(
+                x=totals["Assignacions_previstes"],
+                y=totals["Sorteig"],
+                orientation="h",
+                marker_color="rgba(0,0,0,0)",
+                marker_line_color=COLOR_FORECAST,
+                marker_line_width=4,
+                name="Previstes",
+            )
+        )
     max_val = 0
     if not totals.empty:
         max_val = (
@@ -246,11 +247,16 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
         xaxis_title="Captures",
         yaxis_title="",
         height=400,
+        font_color="black",
+        xaxis=dict(color="black"),
+        yaxis=dict(color="black"),
     )
     return fig
 
 
-def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | None = None):
+def plot_drill(
+    assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | None = None
+):
     """Return a breakdown chart with bars for assignments and lines for applications."""
 
     app_data = app_data if app_data is not None else pd.DataFrame()
@@ -268,9 +274,7 @@ def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | Non
 
     if dim_col in app_data.columns:
         if "Sol_licituds" in app_data.columns:
-            apps_grp = (
-                app_data.groupby(dim_col)["Sol_licituds"].sum().reset_index()
-            )
+            apps_grp = app_data.groupby(dim_col)["Sol_licituds"].sum().reset_index()
         else:
             apps_grp = app_data.groupby(dim_col).size().reset_index(name="Sol_licituds")
     else:
@@ -322,6 +326,9 @@ def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | Non
         height=350,
         xaxis_title="Assignacions",
         xaxis_range=[0, max_val * 1.05 if max_val else 1],
+        font_color="black",
+        xaxis=dict(color="black"),
+        yaxis=dict(color="black"),
     )
 
     return fig
@@ -441,7 +448,9 @@ def main():
         dim_options = ["Tipus"]  # fallback to keep radio alive
     dim = st.radio("Desglossament", dim_options, horizontal=True)
 
-    assign_cols = [s.replace(" ", "_") for s in sel if s.replace(" ", "_") in data.columns]
+    assign_cols = [
+        s.replace(" ", "_") for s in sel if s.replace(" ", "_") in data.columns
+    ]
 
     if dim == "Tipus":
         drill_data = details_filt
