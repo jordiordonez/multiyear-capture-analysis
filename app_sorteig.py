@@ -1,4 +1,4 @@
-import math            # ← NEW: for ceil, floor, isnan
+import math  # ← NEW: for ceil, floor, isnan
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -14,47 +14,66 @@ st.set_page_config(
 
 # ── CONSTANTS ────────────────────────────────────────────────────────────────
 
-ESPECIE_SORTEIGS = OrderedDict({
-    "Isard":   ["IS TCC", "IS VCRS", "IS VCX", "IS VCE"],
-    "Cabirol": ["CAB"],
-    "Mufló":   ["MUF UGEO", "MUF UGC", "MUF VTE-E", "MUF VCE", "MUF R"],
-})
+ESPECIE_SORTEIGS = OrderedDict(
+    {
+        "Isard": ["IS TCC", "IS VCRS", "IS VCX", "IS VCE"],
+        "Cabirol": ["CAB"],
+        "Mufló": ["MUF UGEO", "MUF UGC", "MUF VTE-E", "MUF VCE", "MUF R"],
+    }
+)
 
 # Order of vedats must be preserved for UI display
-VEDAT_PARRÒQUIES = OrderedDict([
-    ("IS VCE", {
-        "La Massana": 0.234,
-        "Sant Julià de Lòria": 0.241,
-        "Andorra la Vella": 0.522,
-        "Escaldes-Engordany": 0.003,
-    }),
-    ("IS VCRS", {"Canillo": 0.5, "Ordino": 0.5}),
-    ("IS VCX", {"La Massana": 1.0}),
-])
+VEDAT_PARRÒQUIES = OrderedDict(
+    [
+        (
+            "IS VCE",
+            {
+                "La Massana": 0.234,
+                "Sant Julià de Lòria": 0.241,
+                "Andorra la Vella": 0.522,
+                "Escaldes-Engordany": 0.003,
+            },
+        ),
+        ("IS VCRS", {"Canillo": 0.5, "Ordino": 0.5}),
+        ("IS VCX", {"La Massana": 1.0}),
+    ]
+)
 
 TIPUS_OPTIONS = [
-    "Femella", "Mascle", "Adult", "Juvenil",
-    "Trofeu", "Selectiu", "Indeterminat",
+    "Femella",
+    "Mascle",
+    "Adult",
+    "Juvenil",
+    "Trofeu",
+    "Selectiu",
+    "Indeterminat",
 ]
 
 
 # ── UTILITIES ────────────────────────────────────────────────────────────────
 
+
 def normalitza_parroquia(valor):
     CODI_PARROQUIES = {
-        1: "Canillo", 2: "Encamp", 3: "Ordino",
-        4: "La Massana", 5: "Andorra la Vella",
-        6: "Sant Julià de Lòria", 7: "Escaldes-Engordany",
+        1: "Canillo",
+        2: "Encamp",
+        3: "Ordino",
+        4: "La Massana",
+        5: "Andorra la Vella",
+        6: "Sant Julià de Lòria",
+        7: "Escaldes-Engordany",
     }
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return None
     txt = str(valor).strip()
     if txt.isdigit():
         return CODI_PARROQUIES.get(int(txt))
-    txt = (txt.lower()
-           .replace("-", " ")
-           .replace("_", " ")
-           .replace("sj", "Sant Julià de Lòria"))
+    txt = (
+        txt.lower()
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace("sj", "Sant Julià de Lòria")
+    )
     for name in CODI_PARROQUIES.values():
         if name.lower() in txt:
             return name
@@ -62,16 +81,31 @@ def normalitza_parroquia(valor):
 
 
 def normalitza_estranger(valor) -> str:
-    if isinstance(valor, str) and valor.strip().lower() in {"si", "sí", "s", "yes", "true", "1"}:
+    if isinstance(valor, str) and valor.strip().lower() in {
+        "si",
+        "sí",
+        "s",
+        "yes",
+        "true",
+        "1",
+    }:
         return "si"
     return "no"
 
 
 # ── CSV VALIDATION HELPERS ───────────────────────────────────────────────────
 
+
 def validar_csv_isard(df):
-    required = {"ID", "Modalitat", "Colla_ID", "Prioritat",
-                "anys_sense_captura", "Parroquia", "Estranger"}
+    required = {
+        "ID",
+        "Modalitat",
+        "Colla_ID",
+        "Prioritat",
+        "anys_sense_captura",
+        "Parroquia",
+        "Estranger",
+    }
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Falten columnes: {', '.join(sorted(missing))}")
@@ -93,8 +127,10 @@ def validar_csv2(df):
 
 # ── HELPER: CHOOSE NEXT CANDIDATE ────────────────────────────────────────────
 
-def tria_candidat(df, assigned, estr_cnt, assignats,
-                  vedat, assignats_parr, rng, total_caps):
+
+def tria_candidat(
+    df, assigned, estr_cnt, assignats, vedat, assignats_parr, rng, total_caps
+):
     pool = df[~df["ID"].isin(assigned)].copy()
     if pool.empty:
         return None
@@ -113,15 +149,24 @@ def tria_candidat(df, assigned, estr_cnt, assignats,
         pool["quota_flag"] = pool["Parroquia"].apply(
             lambda p: 1 if quotas.get(p, 0) - assignats_parr.get(p, 0) > 0 else 0
         )
-        order_cols, asc = ["Prioritat", "quota_flag",
-                           "anys_sense_captura", "rand"], [True, False, False, True]
+        order_cols, asc = ["Prioritat", "quota_flag", "anys_sense_captura", "rand"], [
+            True,
+            False,
+            False,
+            True,
+        ]
     else:
-        order_cols, asc = ["Prioritat", "anys_sense_captura", "rand"], [True, False, True]
+        order_cols, asc = ["Prioritat", "anys_sense_captura", "rand"], [
+            True,
+            False,
+            True,
+        ]
 
     return pool.sort_values(order_cols, ascending=asc).index[0]
 
 
 # ── HELPER: INDIVIDUAL DRAW (no colles) ──────────────────────────────────────
+
 
 def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
     df = df.copy()
@@ -137,16 +182,21 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
     captures_pool = [t for t, q in tipus_quant for _ in range(q)]
     total_caps = len(captures_pool)
     if not ordre_aleatori:
-        captures_pool = captures_pool.copy()   # keep deterministic order
+        captures_pool = captures_pool.copy()  # keep deterministic order
 
     ordre, estrangers, assignats = 1, 0, 0
 
     if ordre_aleatori:
         while captures_pool and not df.loc[~df["assigned"]].empty:
             idx = tria_candidat(
-                df, set(df[df["assigned"]]["ID"]),
-                estrangers, assignats, vedat,
-                assignats_parr, rng, total_caps
+                df,
+                set(df[df["assigned"]]["ID"]),
+                estrangers,
+                assignats,
+                vedat,
+                assignats_parr,
+                rng,
+                total_caps,
             )
             if idx is None:
                 break
@@ -165,9 +215,14 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
         for tipus, q in tipus_quant:
             for _ in range(q):
                 idx = tria_candidat(
-                    df, set(df[df["assigned"]]["ID"]),
-                    estrangers, assignats, vedat,
-                    assignats_parr, rng, total_caps
+                    df,
+                    set(df[df["assigned"]]["ID"]),
+                    estrangers,
+                    assignats,
+                    vedat,
+                    assignats_parr,
+                    rng,
+                    total_caps,
                 )
                 if idx is None:
                     break
@@ -190,6 +245,7 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
 
 # ── HELPER: PARSE 'Tipus' FIELD ──────────────────────────────────────────────
 
+
 def _parse_tipus(value):
     if value is None:
         return []
@@ -199,6 +255,7 @@ def _parse_tipus(value):
 
 
 # ── MAIN: PROCESSAR SORTEIGS ────────────────────────────────────────────────
+
 
 def processar_sorteigs(df1, df2, config, especie, seed):
     rng = np.random.RandomState(seed) if seed is not None else np.random.RandomState()
@@ -231,9 +288,14 @@ def processar_sorteigs(df1, df2, config, especie, seed):
 
         subset = df2[df2["Codi_Sorteig"] == sorteig].copy()
         if especie == "Isard" and sorteig == "IS TCC":
-            extra_ids = df1.loc[df1["Modalitat"].notna() & ~df1["ID"].isin(df2["ID"]), "ID"]
+            extra_ids = df1.loc[
+                df1["Modalitat"].notna() & ~df1["ID"].isin(df2["ID"]), "ID"
+            ]
             if not extra_ids.empty:
-                subset = pd.concat([subset, pd.DataFrame({"ID": extra_ids, "Codi_Sorteig": sorteig})], ignore_index=True)
+                subset = pd.concat(
+                    [subset, pd.DataFrame({"ID": extra_ids, "Codi_Sorteig": sorteig})],
+                    ignore_index=True,
+                )
         if subset.empty or conf_rows.empty:
             continue
         if subset["ID"].duplicated().any():
@@ -241,13 +303,16 @@ def processar_sorteigs(df1, df2, config, especie, seed):
 
         part = subset.merge(df1, on="ID")
         part["Prioritat"] = part.apply(
-            lambda r: (5 + captures_prev.get(r["ID"], 0) - 1)
-            if captures_prev.get(r["ID"], 0) > 0 else r["Prioritat"],
+            lambda r: (
+                (5 + captures_prev.get(r["ID"], 0) - 1)
+                if captures_prev.get(r["ID"], 0) > 0
+                else r["Prioritat"]
+            ),
             axis=1,
         )
         if especie == "Isard" and sorteig == "IS TCC":
-            part = part[part["Modalitat"].notna() & (part["Modalitat"] != "")]
-        subset_ids = set(subset["ID"])
+            part = part[part["Modalitat"].isin(["A", "B"])].copy()
+        subset_ids = set(part["ID"])
 
         if especie == "Isard" and sorteig == "IS TCC":
             total_cap = int(conf_rows["Quantitat"].sum())
@@ -264,18 +329,18 @@ def processar_sorteigs(df1, df2, config, especie, seed):
                 tipus_quant.append(("+".join(tipus), int(r["Quantitat"])))
             vedat = sorteig if (especie == "Isard" and sorteig != "IS TCC") else None
             asignats = sorteig_individual(
-                part, tipus_quant,
+                part,
+                tipus_quant,
                 bool(conf_rows.iloc[0].get("Aleatori", False)),
                 vedat,
-                np.random.RandomState(rng.randint(0, 2**32 - 1))
+                np.random.RandomState(rng.randint(0, 2**32 - 1)),
             )
 
         # ── SAFE MERGE: unique column names per sorteig
         # 1️⃣  keep Estranger for the résumé, but don’t let it into the merge
-        asignats = asignats.rename(columns={
-            "ordre": f"ordre_{col_base}",
-            "tipus": f"tipus_{col_base}"
-        })
+        asignats = asignats.rename(
+            columns={"ordre": f"ordre_{col_base}", "tipus": f"tipus_{col_base}"}
+        )
 
         # 2️⃣  calculate 'estr' **before** we drop Estranger
         estr = asignats[asignats["Estranger"] == "si"][f"ordre_{col_base}"].count()
@@ -293,15 +358,16 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         for wid in winners:
             captures_prev[wid] = captures_prev.get(wid, 0) + 1
 
-        resultat.drop(columns=[f"ordre_{col_base}", f"tipus_{col_base}"],
-                      inplace=True)
+        resultat.drop(columns=[f"ordre_{col_base}", f"tipus_{col_base}"], inplace=True)
         resultat[col_base] = resultat[col_base].astype("Int64")
 
         asign_finals = asignats[f"ordre_{col_base}"].notna().sum()
         estr = asignats[asignats["Estranger"] == "si"][f"ordre_{col_base}"].count()
-        tipus_counts = asignats.loc[
-            asignats[f"ordre_{col_base}"].notna(), f"tipus_{col_base}"
-        ].value_counts().to_dict()
+        tipus_counts = (
+            asignats.loc[asignats[f"ordre_{col_base}"].notna(), f"tipus_{col_base}"]
+            .value_counts()
+            .to_dict()
+        )
 
         parr_counts = {}
         if "Parroquia" in asignats.columns:
@@ -312,28 +378,34 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         for _, r in conf_rows.iterrows():
             tp = _parse_tipus(r["Tipus"])
             tip_label = "+".join(tp) if tp else "Indeterminat"
-            previs_counts[tip_label] = previs_counts.get(tip_label, 0) + int(r["Quantitat"])
+            previs_counts[tip_label] = previs_counts.get(tip_label, 0) + int(
+                r["Quantitat"]
+            )
 
         sol_licituds = len(subset_ids)
         resum_rows = []
         for t in set(previs_counts) | set(tipus_counts):
-            resum_rows.append({
-                "Sorteig": sorteig,
-                "Tipus": t,
-                "Assignacions_previstes": previs_counts.get(t, 0),
-                "Sol_licituds": sol_licituds,
-                "Assignacions_finals": tipus_counts.get(t, 0),
-                "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
-            })
+            resum_rows.append(
+                {
+                    "Sorteig": sorteig,
+                    "Tipus": t,
+                    "Assignacions_previstes": previs_counts.get(t, 0),
+                    "Sol_licituds": sol_licituds,
+                    "Assignacions_finals": tipus_counts.get(t, 0),
+                    "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
+                }
+            )
         if not resum_rows:
-            resum_rows.append({
-                "Sorteig": sorteig,
-                "Tipus": "Indeterminat",
-                "Assignacions_previstes": sum(previs_counts.values()),
-                "Sol_licituds": sol_licituds,
-                "Assignacions_finals": asign_finals,
-                "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
-            })
+            resum_rows.append(
+                {
+                    "Sorteig": sorteig,
+                    "Tipus": "Indeterminat",
+                    "Assignacions_previstes": sum(previs_counts.values()),
+                    "Sol_licituds": sol_licituds,
+                    "Assignacions_finals": asign_finals,
+                    "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
+                }
+            )
         resum = pd.DataFrame(resum_rows)
         for p, v in parr_counts.items():
             resum[p] = v
@@ -344,20 +416,22 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         lambda r: r.fillna(0).gt(0).any(), axis=1
     )
     resultat["Nou_Anys_sense_captura"] = resultat.apply(
-        lambda r: r["anys_sense_captura"] + 1 if not r["te_capture"] else 0,
-        axis=1
+        lambda r: r["anys_sense_captura"] + 1 if not r["te_capture"] else 0, axis=1
     )
     resultat["Nova_prioritat"] = resultat.apply(
-        lambda r: 4 if any(
-            str(r[f"Tipus_{c}"]).find("Mascle") >= 0 for c in capture_cols
-        ) else (4 if r["te_capture"] else 2),
-        axis=1
+        lambda r: (
+            4
+            if any(str(r[f"Tipus_{c}"]).find("Mascle") >= 0 for c in capture_cols)
+            else (4 if r["te_capture"] else 2)
+        ),
+        axis=1,
     )
     resultat.drop(columns=["te_capture"], inplace=True)
     return resultat, resum_sorteigs
 
 
 # ── DRAW WITH COLLES (IS TCC) ────────────────────────────────────────────────
+
 
 def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     if total_captures <= 0:
@@ -385,9 +459,11 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     leftover = n_colla - colles["assignats"].sum()
     for _ in range(leftover):
         colles["rati"] = colles["assignats"] / colles["caçadors"]
-        cid = colles.loc[np.isclose(colles["rati"],
-                                    colles["rati"].min())]\
-                     .sample(1, random_state=rng)["Colla_ID"].iat[0]
+        cid = (
+            colles.loc[np.isclose(colles["rati"], colles["rati"].min())]
+            .sample(1, random_state=rng)["Colla_ID"]
+            .iat[0]
+        )
         colles.loc[colles["Colla_ID"] == cid, "assignats"] += 1
 
     for _, row in colles.iterrows():
@@ -396,11 +472,14 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
             sub = df[(df["Modalitat"] == "A") & (df["Colla_ID"] == cid)]
             group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
             group["rand"] = rng.random(len(group))
-            idxs = group.sort_values([
-                "Prioritat",
-                "anys_sense_captura",
-                "rand",
-            ], ascending=[True, False, True]).index[:min(to_assign, len(group))]
+            idxs = group.sort_values(
+                [
+                    "Prioritat",
+                    "anys_sense_captura",
+                    "rand",
+                ],
+                ascending=[True, False, True],
+            ).index[: min(to_assign, len(group))]
             for idx in idxs:
                 if df.at[idx, "adjudicats"] == 0:
                     df.at[idx, "ordre"] = ordre_counter
@@ -414,11 +493,14 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
         sub = df[df["Modalitat"] == "B"]
         group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
         group["rand"] = rng.random(len(group))
-        idxs = group.sort_values([
-            "Prioritat",
-            "anys_sense_captura",
-            "rand",
-        ], ascending=[True, False, True]).index[:min(rem, len(group))]
+        idxs = group.sort_values(
+            [
+                "Prioritat",
+                "anys_sense_captura",
+                "rand",
+            ],
+            ascending=[True, False, True],
+        ).index[: min(rem, len(group))]
         for idx in idxs:
             if df.at[idx, "adjudicats"] == 0:
                 df.at[idx, "ordre"] = ordre_counter
@@ -430,7 +512,9 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
         lambda r: 5 + r["adjudicats"] - 1 if r["adjudicats"] > 0 else r["Prioritat"],
         axis=1,
     )
-    df["nova_prioritat Any següent"] = df["adjudicats"].apply(lambda x: 4 if x > 0 else 2)
+    df["nova_prioritat Any següent"] = df["adjudicats"].apply(
+        lambda x: 4 if x > 0 else 2
+    )
     df["nou_anys_sense_captura"] = df.apply(
         lambda r: 0 if r["adjudicats"] else r["anys_sense_captura"] + 1, axis=1
     )
@@ -453,7 +537,7 @@ st.markdown(
     ul[data-testid="stSidebarNavItems"] {display: none;}
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 with st.sidebar:
@@ -588,8 +672,7 @@ with st.expander("Configuració de captures per sorteig"):
         key_prefix = sorteig.replace(" ", "_")
         if especie == "Isard" and sorteig == "IS TCC":
             st.number_input(
-                "Quantitat Captures", min_value=0, step=1,
-                key=f"total_{key_prefix}"
+                "Quantitat Captures", min_value=0, step=1, key=f"total_{key_prefix}"
             )
             st.session_state.setdefault(f"configs_{key_prefix}", [])
         else:
@@ -611,9 +694,7 @@ with st.expander("Configuració de captures per sorteig"):
                 if sel_key not in st.session_state:
                     st.session_state[sel_key] = conf["selections"]
                 sel = st.multiselect(
-                    f"Valors Tipus {idx+1}",
-                    TIPUS_OPTIONS,
-                    key=sel_key
+                    f"Valors Tipus {idx+1}", TIPUS_OPTIONS, key=sel_key
                 )
                 if "Indeterminat" in sel:
                     sel = ["Indeterminat"]
@@ -622,10 +703,7 @@ with st.expander("Configuració de captures per sorteig"):
                 qty_key = f"{key_prefix}_qty_{idx}"
                 if qty_key not in st.session_state:
                     st.session_state[qty_key] = conf["qty"]
-                qty = st.number_input(
-                    "Quantitat", min_value=0, step=1,
-                    key=qty_key
-                )
+                qty = st.number_input("Quantitat", min_value=0, step=1, key=qty_key)
 
                 st.session_state[cfg_key][idx] = {"selections": sel, "qty": qty}
 
@@ -667,20 +745,20 @@ if st.session_state.get("run_draw"):
     # ------------------------------------------------------------------ #
     # 2️⃣  IS‑TCC: detect hunters without Modalitat                       #
     # ------------------------------------------------------------------ #
-    ids_to_skip = []      # ← will hold the IDs we really want to ignore
+    ids_to_skip = []  # ← will hold the IDs we really want to ignore
 
     if especie == "Isard":
         inscrits_tcc = df2[df2["Codi_Sorteig"] == "IS TCC"]
-        missing_mod = inscrits_tcc.merge(
-            df1[["ID", "Modalitat"]], on="ID", how="left"
-        )
+        missing_mod = inscrits_tcc.merge(df1[["ID", "Modalitat"]], on="ID", how="left")
         missing_mod = missing_mod[
             missing_mod["Modalitat"].isna()
             | (missing_mod["Modalitat"].astype(str).str.strip() == "")
         ]
 
         # -- Ask the user what to do ------------------------------------
-        if not missing_mod.empty and not st.session_state.get("confirm_missing_mod", False):
+        if not missing_mod.empty and not st.session_state.get(
+            "confirm_missing_mod", False
+        ):
             st.warning(
                 "Els següents caçadors s'han inscrit al TCC però no tenen modalitat "
                 "especificada i s'ignoraran si continues: "
@@ -695,7 +773,7 @@ if st.session_state.get("run_draw"):
             with col2:
                 if st.button("Atura el procés", key="stop_missing_mod"):
                     st.stop()
-            st.stop()   # wait until the user picks an option
+            st.stop()  # wait until the user picks an option
 
         # -- User already confirmed on a previous run -------------------
         ids_to_skip = st.session_state.get("ids_to_skip_tcc", [])
@@ -716,22 +794,26 @@ if st.session_state.get("run_draw"):
 
         if especie == "Isard" and sorteig == "IS TCC":
             total = st.session_state.get(f"total_{key_prefix}", 0)
-            config_rows.append({
-                "Codi_Sorteig": sorteig,
-                "Tipus": "",
-                "Quantitat": total,
-                "Aleatori": True,
-            })
+            config_rows.append(
+                {
+                    "Codi_Sorteig": sorteig,
+                    "Tipus": "",
+                    "Quantitat": total,
+                    "Aleatori": True,
+                }
+            )
         else:
             aleatori = st.session_state.get(f"aleatori_{key_prefix}", True)
             for conf in st.session_state.get(f"configs_{key_prefix}", []):
                 tip = "+".join(conf["selections"]) if conf["selections"] else ""
-                config_rows.append({
-                    "Codi_Sorteig": sorteig,
-                    "Tipus": tip,
-                    "Quantitat": conf["qty"],
-                    "Aleatori": aleatori,
-                })
+                config_rows.append(
+                    {
+                        "Codi_Sorteig": sorteig,
+                        "Tipus": tip,
+                        "Quantitat": conf["qty"],
+                        "Aleatori": aleatori,
+                    }
+                )
 
     config_df = pd.DataFrame(config_rows)
 
@@ -743,8 +825,8 @@ if st.session_state.get("run_draw"):
     except Exception as exc:
         st.error(f"🚫 Error en el sorteig: {exc}")
         st.stop()
-    st.session_state["resultat"] = resultat        # full table, ~ID × columns
-    st.session_state["resums"]   = resums          # list of per-draw summaries 
+    st.session_state["resultat"] = resultat  # full table, ~ID × columns
+    st.session_state["resums"] = resums  # list of per-draw summaries
     st.subheader("Resultats")
     st.dataframe(resultat, use_container_width=True)
 
@@ -754,13 +836,9 @@ if st.session_state.get("run_draw"):
         file_name="resultats.csv",
     )
 
-
-
-
     # ------------------------------------------------------------------ #
     # 6️⃣  Clean‑up session flags so next run starts fresh                #
     # ------------------------------------------------------------------ #
     st.session_state.pop("confirm_missing_mod", None)
     st.session_state.pop("ids_to_skip_tcc", None)
     st.session_state["run_draw"] = False
-
