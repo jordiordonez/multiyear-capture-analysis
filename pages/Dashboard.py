@@ -114,7 +114,9 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
             x=totals['Assignacions_previstes'],
             y=totals['Sorteig'],
             orientation='h',
-            marker_color=COLOR_FORECAST,
+            marker_color='rgba(0,0,0,0)',
+            marker_line_color=COLOR_FORECAST,
+            marker_line_width=4,
             name='Previstes',
         ))
     cumulative = np.zeros(len(pivot))
@@ -131,16 +133,16 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
         cumulative += vals
     for idx, row in totals.iterrows():
         if 'Sol_licituds' in row:
-            color = COLOR_APPS_BELOW if row['Sol_licituds'] <= row['Assignacions_previstes'] else COLOR_APPS_ABOVE
+            color = (COLOR_APPS_BELOW
+                     if row['Sol_licituds'] <= row['Assignacions_previstes']
+                     else COLOR_APPS_ABOVE)
             fig.add_trace(go.Scatter(
-                x=[row['Sol_licituds']],
-                y=[row['Sorteig']],
-                mode='markers',
-                marker_symbol='line-ns-open',
-                marker_line_color=color,
-                marker_color=color,
-                marker_size=12,
+                x=[0, row['Sol_licituds']],
+                y=[row['Sorteig'], row['Sorteig']],
+                mode='lines',
+                line=dict(color=color, width=3),
                 name='Sol·licituds' if idx == 0 else None,
+                showlegend=(idx == 0),
             ))
     max_val = 0
     if not totals.empty:
