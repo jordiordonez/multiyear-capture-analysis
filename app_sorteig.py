@@ -457,15 +457,33 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     df = df.copy()
     df["adjudicats"] = 0
     df["ordre"] = np.nan
-    ordre_counter = 1
-    df_colla, df_indiv = df[df["Modalitat"] == "A"], df[df["Modalitat"] == "B"]
+    df["Estranger"] = df["Estranger"].apply(normalitza_estranger)
+
+    # Calcula límit global d’estrangers
+    total_non_strangers = (df["Estranger"] == "no").sum()
+    estranger_limit = min(math.floor(total_non_strangers / 9), math.floor(0.1 * total_captures))
+
+    # Divideix per modalitat
+    df_colla = df[df["Modalitat"] == "A"]
+    df_indiv = df[df["Modalitat"] == "B"]
 
     total_applicants = len(df_colla) + len(df_indiv)
+    if total_applicants == 0:
+        raise ValueError("No hi ha cap caçador amb Modalitat A o B")
+
+    estranger_limit_A = round(estranger_limit * len(df_colla) / total_applicants)
+    estranger_limit_B = estranger_limit - estranger_limit_A
+
+    ordre_counter = 1
+    estrangers_A = 0
+    estrangers_B = 0
+
+    # Decideix quantes captures per modalitat
     ratio = math.ceil(total_applicants / total_captures)
     n_indiv = round(total_captures * len(df_indiv) / total_applicants)
     n_colla = total_captures - n_indiv
 
-    # assign colles
+    # assignació colles (Modalitat A)
     colles = df_colla.groupby("Colla_ID").size().reset_index(name="caçadors")
     colles["assignats"] = (colles["caçadors"] // ratio).astype(int)
     leftover = n_colla - colles["assignats"].sum()
@@ -481,45 +499,59 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     for _, row in colles.iterrows():
         cid, to_assign = row["Colla_ID"], int(row["assignats"])
         while to_assign:
-            sub = df[(df["Modalitat"] == "A") & (df["Colla_ID"] == cid)]
-            group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
+            sub = df[
+                (df["Modalitat"] == "A")
+                & (df["Colla_ID"] == cid)
+                & (df["adjudicats"] == 0)
+            ]
+            if sub.empty:
+                break
+            group = sub.copy()
             group["rand"] = rng.random(len(group))
             idxs = group.sort_values(
-                [
-                    "Prioritat",
-                    "anys_sense_captura",
-                    "rand",
-                ],
-                ascending=[True, False, True],
+                ["Prioritat", "anys_sense_captura", "rand"],
+                ascending=[True, False, True]
             ).index[: min(to_assign, len(group))]
+
             for idx in idxs:
+                if df.at[idx, "Estranger"] == "si" and estrangers_A >= estranger_limit_A:
+                    continue  # límit d’estrangers colla assolit
                 if df.at[idx, "adjudicats"] == 0:
                     df.at[idx, "ordre"] = ordre_counter
+                    df.at[idx, "adjudicats"] = 1
                     ordre_counter += 1
-                df.at[idx, "adjudicats"] = 1
-            to_assign -= len(idxs)
+                    if df.at[idx, "Estranger"] == "si":
+                        estrangers_A += 1
+                    to_assign -= 1
 
-    # assign individuals
+    # assignació individus (Modalitat B)
     rem = n_indiv
     while rem:
-        sub = df[df["Modalitat"] == "B"]
-        group = sub[sub["adjudicats"] == sub["adjudicats"].min()].copy()
+        sub = df[
+            (df["Modalitat"] == "B")
+            & (df["adjudicats"] == 0)
+        ]
+        if sub.empty:
+            break
+        group = sub.copy()
         group["rand"] = rng.random(len(group))
         idxs = group.sort_values(
-            [
-                "Prioritat",
-                "anys_sense_captura",
-                "rand",
-            ],
-            ascending=[True, False, True],
+            ["Prioritat", "anys_sense_captura", "rand"],
+            ascending=[True, False, True]
         ).index[: min(rem, len(group))]
+
         for idx in idxs:
+            if df.at[idx, "Estranger"] == "si" and estrangers_B >= estranger_limit_B:
+                continue  # límit d’estrangers individual assolit
             if df.at[idx, "adjudicats"] == 0:
                 df.at[idx, "ordre"] = ordre_counter
+                df.at[idx, "adjudicats"] = 1
                 ordre_counter += 1
-            df.at[idx, "adjudicats"] = 1
-        rem -= len(idxs)
+                if df.at[idx, "Estranger"] == "si":
+                    estrangers_B += 1
+                rem -= 1
 
+    # Actualitzacions finals
     df["nova_prioritat"] = df.apply(
         lambda r: 5 + r["adjudicats"] - 1 if r["adjudicats"] > 0 else r["Prioritat"],
         axis=1,
@@ -532,7 +564,6 @@ def assignar_isards_sorteig_csv(df, total_captures, seed=None):
     )
     df["ordre"] = df["ordre"].astype("Int64")
     return df
-
 
 # ── (Additional helper functions assignar_captura_csv & assignar_captura_parroquial_csv unchanged) ──
 #    ↳ They are long but identical to what you pasted, no structural fix needed.
