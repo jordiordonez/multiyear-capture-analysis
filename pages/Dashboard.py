@@ -192,13 +192,14 @@ def main():
         """,
         unsafe_allow_html=True,
     )
+    default_idx = 1 if st.session_state.get('section') == 'Dashboard' else 0
     with st.sidebar:
         section = option_menu(
             'Menú', ['Sorteig', 'Dashboard'],
-            icons=['dice-5', 'bar-chart'], default_index=0,
+            icons=['dice-5', 'bar-chart'], default_index=default_idx,
         )
         st.session_state['section'] = section
-    if st.session_state.get('section') == 'Sorteig':
+    if section == 'Sorteig':
         st.switch_page('app_sorteig.py')
 
     if 'resultat' not in st.session_state:
