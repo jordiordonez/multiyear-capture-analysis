@@ -13,8 +13,8 @@ COLOR_APPS_BELOW = "#000000"
 COLOR_APPS_ABOVE = "#000000"
 TIPUS_COLORS = {
     "General": COLOR_BLUE,
-    "Reserva": "#2ca02c",
-    "Altres": "#ff7f0e",
+    "Reserva (red)": "#d62728",   # strong red, same family as "#1f77b4"
+    "Altres (orange)": "#ff7f0e",
 }
 ESTRANGER_COLORS = {"Si": COLOR_BLUE, "No": COLOR_BLUE}
 PARROQUIA_COLORS = {
