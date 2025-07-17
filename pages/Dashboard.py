@@ -251,68 +251,81 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
     return fig
 
 
-def plot_drill(data: pd.DataFrame, dim: str):
-    """Return a breakdown bar chart for the selected dimension.
+def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | None = None):
+    """Return a breakdown chart with bars for assignments and lines for applications."""
 
-    The function is resilient to missing columns and will return an empty
-    figure when the required data is not available.
-    """
+    app_data = app_data if app_data is not None else pd.DataFrame()
 
-    # All breakdowns require ``Assignacions_finals``.  If it is missing we
-    # simply return an empty figure instead of raising ``KeyError``.
-    if "Assignacions_finals" not in data.columns:
+    if "Assignacions_finals" not in assign_data.columns:
         return go.Figure()
 
+    dim_col = {"Parròquia": "Parroquia"}.get(dim, dim)
+
+    assign_grp = (
+        assign_data.groupby(dim_col)["Assignacions_finals"].sum().reset_index()
+        if dim_col in assign_data.columns
+        else pd.DataFrame(columns=[dim_col, "Assignacions_finals"])
+    )
+    apps_grp = (
+        app_data.groupby(dim_col).size().reset_index(name="Sol_licituds")
+        if dim_col in app_data.columns
+        else pd.DataFrame(columns=[dim_col, "Sol_licituds"])
+    )
+
+    if assign_grp.empty and apps_grp.empty:
+        return go.Figure()
+
+    colors = None
     if dim == "Tipus":
-        if "Tipus" not in data.columns:
-            return go.Figure()
-        grp = data.groupby("Tipus")["Assignacions_finals"].sum().reset_index()
-        fig = go.Figure()
+        colors = [TIPUS_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
+    elif dim == "Estranger":
+        colors = [ESTRANGER_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
+    elif dim == "Parròquia":
+        colors = [PARROQUIA_COLORS.get(t, "#888") for t in assign_grp[dim_col]]
+
+    fig = go.Figure(
+        go.Bar(
+            x=assign_grp["Assignacions_finals"],
+            y=assign_grp[dim_col],
+            orientation="h",
+            marker_color=colors,
+            name="Assignacions",
+        )
+    )
+
+    show_leg = True
+    for _, r in apps_grp.iterrows():
+        color = None
+        if dim == "Tipus":
+            color = TIPUS_COLORS.get(r[dim_col], "#555")
+        elif dim == "Estranger":
+            color = ESTRANGER_COLORS.get(r[dim_col], "#555")
+        elif dim == "Parròquia":
+            color = PARROQUIA_COLORS.get(r[dim_col], "#555")
+        else:
+            color = "#555"
         fig.add_trace(
-            go.Bar(
-                x=grp["Assignacions_finals"],
-                y=grp["Tipus"],
-                orientation="h",
-                marker_color=[TIPUS_COLORS.get(t, "#888") for t in grp["Tipus"]],
+            go.Scatter(
+                x=[0, r["Sol_licituds"]],
+                y=[r[dim_col], r[dim_col]],
+                mode="lines",
+                line=dict(color=color, width=3),
+                name="Sol·licituds" if show_leg else None,
+                showlegend=show_leg,
             )
         )
-        fig.update_layout(height=350, xaxis_title="Assignacions")
-    elif dim == "Estranger" and "Estranger" in data.columns:
-        grp = data.groupby("Estranger")["Assignacions_finals"].sum().reset_index()
-        colors = [ESTRANGER_COLORS.get(x, "#888") for x in grp["Estranger"]]
-        fig = go.Figure(
-            go.Bar(
-                x=grp["Assignacions_finals"],
-                y=grp["Estranger"],
-                orientation="h",
-                marker_color=colors,
-            )
-        )
-        fig.update_layout(height=350, xaxis_title="Assignacions")
-    elif dim == "Parròquia" and "Parroquia" in data.columns:
-        grp = data.groupby("Parroquia")["Assignacions_finals"].sum().reset_index()
-        colors = [PARROQUIA_COLORS.get(x, "#888") for x in grp["Parroquia"]]
-        fig = go.Figure(
-            go.Bar(
-                x=grp["Assignacions_finals"],
-                y=grp["Parroquia"],
-                orientation="h",
-                marker_color=colors,
-            )
-        )
-        fig.update_layout(height=350, xaxis_title="Assignacions")
-    else:  # Prioritat
-        if "Prioritat" not in data.columns:
-            return go.Figure()
-        grp = data.groupby("Prioritat")["Assignacions_finals"].sum().reset_index()
-        fig = go.Figure(
-            go.Bar(
-                x=grp["Assignacions_finals"],
-                y=grp["Prioritat"],
-                orientation="h",
-            )
-        )
-        fig.update_layout(height=350, xaxis_title="Assignacions")
+        show_leg = False
+
+    max_val = 0
+    if not assign_grp.empty:
+        max_val = assign_grp["Assignacions_finals"].max()
+    if not apps_grp.empty:
+        max_val = max(max_val, apps_grp["Sol_licituds"].max())
+    fig.update_layout(
+        height=350,
+        xaxis_title="Assignacions",
+        xaxis_range=[0, max_val * 1.05 if max_val else 1],
+    )
 
     return fig
 
@@ -410,6 +423,9 @@ def main():
     if prev:
         cap3 += f" · {finals/prev:.1%} de previstes"
     k3.caption(cap3)
+    if finals == 0:
+        st.info("Aquest sorteig no ha tingut assignacions.")
+        return
 
     st.plotly_chart(
         plot_main_chart(totals_filt, details_filt), use_container_width=True
@@ -437,7 +453,7 @@ def main():
             drill_data = _grp
         else:
             drill_data = pd.DataFrame(columns=["Assignacions_finals", _dim_col])
-    drill_fig = plot_drill(drill_data, dim)
+    drill_fig = plot_drill(drill_data, dim, data)
     st.plotly_chart(drill_fig, use_container_width=True)
 
     with st.expander("Dades filtrades"):
