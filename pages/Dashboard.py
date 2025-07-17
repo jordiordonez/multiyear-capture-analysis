@@ -37,18 +37,13 @@ sense_cap = (df["anys_sense_captura"] > 0).sum()
 
 kpi1, kpi2, kpi3 = st.columns(3)
 kpi1.metric("Sol·licituds totals", f"{total:,}")
-kpi2.metric(
-    "Estrangers",
-    f"{estrang:,}",
-    delta=f"{estrang/total: .1%}",
-    delta_color="off",
-)
+kpi2.metric("Estrangers", f"{estrang:,}")
+kpi2.caption(f"{estrang/total:.1%} del total")
 kpi3.metric(
     ">0 anys sense captura",
-    f"{sense_cap:,}",
-    delta=f"{sense_cap/total: .1%}",
-    delta_color="off",
+    f"{sense_cap:,}"
 )
+kpi3.caption(f"{sense_cap/total:.1%} del total")
 
 st.divider()
 
@@ -60,9 +55,23 @@ if not summary.empty:
 # ── 3.2 Interactive filters ─────────────────────────
 with st.sidebar:
     st.header("Filtres")
-    mod_sel   = st.multiselect("Modalitat", sorted(df["Modalitat"].dropna().unique()))
-    parro_sel = st.multiselect("Parròquia", sorted(df.get("Parroquia", pd.Series()).dropna().unique()))
-    pri_sel   = st.slider("Prioritat", 0, int(df["Prioritat"].max()), (0, int(df["Prioritat"].max())))
+    if "Modalitat" in df.columns:
+        mod_sel = st.multiselect(
+            "Modalitat",
+            sorted(df["Modalitat"].dropna().unique())
+        )
+    else:
+        mod_sel = []
+    parro_sel = st.multiselect(
+        "Parròquia",
+        sorted(df.get("Parroquia", pd.Series()).dropna().unique())
+    )
+    pri_sel = st.slider(
+        "Prioritat",
+        0,
+        int(df["Prioritat"].max()),
+        (0, int(df["Prioritat"].max()))
+    )
     
 ###############################################################################
 # Correct way to build the filter mask
@@ -71,7 +80,7 @@ with st.sidebar:
 mask = pd.Series(True, index=df.index)
 
 # 1️⃣ Modalitat ---------------------------------------------------------------
-if mod_sel:                          # only if user picked something
+if mod_sel and "Modalitat" in df.columns:
     mask &= df["Modalitat"].isin(mod_sel)
 
 # 2️⃣ Parròquia --------------------------------------------------------------
