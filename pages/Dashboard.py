@@ -2,7 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="📊 Resultats sorteig", layout="wide")
+st.set_page_config(
+    page_title="📊 Resultats sorteig",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None, "About": None},
+)
 st.markdown(
     """
     <style>
@@ -33,11 +37,25 @@ sense_cap = (df["anys_sense_captura"] > 0).sum()
 
 kpi1, kpi2, kpi3 = st.columns(3)
 kpi1.metric("Sol·licituds totals", f"{total:,}")
-kpi2.metric("Estrangers", f"{estrang:,}", delta=f"{estrang/total: .1%}")
-kpi3.metric(">0 anys sense captura", f"{sense_cap:,}",
-            delta=f"{sense_cap/total: .1%}")
+kpi2.metric(
+    "Estrangers",
+    f"{estrang:,}",
+    delta=f"{estrang/total: .1%}",
+    delta_color="off",
+)
+kpi3.metric(
+    ">0 anys sense captura",
+    f"{sense_cap:,}",
+    delta=f"{sense_cap/total: .1%}",
+    delta_color="off",
+)
 
 st.divider()
+
+# ── 3.1.b Resum per sorteig ─────────────────────────
+if not summary.empty:
+    st.subheader("Resum per sorteig")
+    st.dataframe(summary, use_container_width=True)
 
 # ── 3.2 Interactive filters ─────────────────────────
 with st.sidebar:

@@ -118,7 +118,12 @@ def assignar_isards_sorteig_csv(
     df.drop(columns=['rand'], errors='ignore').to_csv(output_csv, index=False)
     return df
 
-st.set_page_config(page_title="App Sorteig Captures Isard", page_icon="🦌", layout="centered")
+st.set_page_config(
+    page_title="App Sorteig Captures Isard",
+    page_icon="🦌",
+    layout="centered",
+    menu_items={"Get Help": None, "Report a bug": None, "About": None},
+)
 
 st.title("Sorteig de Captures d'Isard")
 
