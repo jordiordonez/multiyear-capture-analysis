@@ -156,7 +156,20 @@ def plot_main_chart(totals: pd.DataFrame, details: pd.DataFrame):
 
 
 def plot_drill(data: pd.DataFrame, dim: str):
+    """Return a breakdown bar chart for the selected dimension.
+
+    The function is resilient to missing columns and will return an empty
+    figure when the required data is not available.
+    """
+
+    # All breakdowns require ``Assignacions_finals``.  If it is missing we
+    # simply return an empty figure instead of raising ``KeyError``.
+    if 'Assignacions_finals' not in data.columns:
+        return go.Figure()
+
     if dim == 'Tipus':
+        if 'Tipus' not in data.columns:
+            return go.Figure()
         grp = data.groupby('Tipus')['Assignacions_finals'].sum().reset_index()
         fig = go.Figure()
         fig.add_trace(go.Bar(
@@ -169,22 +182,34 @@ def plot_drill(data: pd.DataFrame, dim: str):
     elif dim == 'Estranger' and 'Estranger' in data.columns:
         grp = data.groupby('Estranger')['Assignacions_finals'].sum().reset_index()
         colors = [ESTRANGER_COLORS.get(x, '#888') for x in grp['Estranger']]
-        fig = go.Figure(go.Bar(x=grp['Assignacions_finals'], y=grp['Estranger'],
-                               orientation='h', marker_color=colors))
+        fig = go.Figure(go.Bar(
+            x=grp['Assignacions_finals'],
+            y=grp['Estranger'],
+            orientation='h',
+            marker_color=colors,
+        ))
         fig.update_layout(height=350, xaxis_title='Assignacions')
     elif dim == 'Parròquia' and 'Parroquia' in data.columns:
         grp = data.groupby('Parroquia')['Assignacions_finals'].sum().reset_index()
         colors = [PARROQUIA_COLORS.get(x, '#888') for x in grp['Parroquia']]
-        fig = go.Figure(go.Bar(x=grp['Assignacions_finals'], y=grp['Parroquia'],
-                               orientation='h', marker_color=colors))
+        fig = go.Figure(go.Bar(
+            x=grp['Assignacions_finals'],
+            y=grp['Parroquia'],
+            orientation='h',
+            marker_color=colors,
+        ))
         fig.update_layout(height=350, xaxis_title='Assignacions')
     else:  # Prioritat
         if 'Prioritat' not in data.columns:
             return go.Figure()
         grp = data.groupby('Prioritat')['Assignacions_finals'].sum().reset_index()
-        fig = go.Figure(go.Bar(x=grp['Assignacions_finals'], y=grp['Prioritat'],
-                               orientation='h'))
+        fig = go.Figure(go.Bar(
+            x=grp['Assignacions_finals'],
+            y=grp['Prioritat'],
+            orientation='h',
+        ))
         fig.update_layout(height=350, xaxis_title='Assignacions')
+
     return fig
 
 
@@ -274,15 +299,21 @@ def main():
         cap3 += f" · {finals/prev:.1%} de previstes"
     k3.caption(cap3)
 
-    st.plotly_chart(plot_main_chart(totals_filt, details_filt), use_container_width=True)
+    st.plotly_chart(
+        plot_main_chart(totals_filt, details_filt), use_container_width=True
+    )
 
-    dim_options = ['Tipus']
+    dim_options = []
+    if 'Tipus' in data.columns:
+        dim_options.append('Tipus')
     if 'Estranger' in data.columns:
         dim_options.append('Estranger')
     if 'Parroquia' in data.columns:
         dim_options.append('Parròquia')
     if 'Prioritat' in data.columns:
         dim_options.append('Prioritat')
+    if not dim_options:
+        dim_options = ['Tipus']  # fallback to keep radio alive
     dim = st.radio('Desglossament', dim_options, horizontal=True)
     drill_data = data[data['Sorteig'].isin(sorteig_sel)] if 'Sorteig' in data.columns else data
     drill_fig = plot_drill(drill_data, dim)
