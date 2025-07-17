@@ -31,6 +31,20 @@ def strip_accents(text: str) -> str:
     )
 
 
+def normalize_estranger(value: str) -> str:
+    """Return standardized 'Si'/'No' for foreigner flag."""
+    if isinstance(value, str) and value.strip().lower() in {
+        "si",
+        "sí",
+        "s",
+        "yes",
+        "true",
+        "1",
+    }:
+        return "Si"
+    return "No"
+
+
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     mapping = {}
     for col in df.columns:
@@ -106,6 +120,45 @@ def build_summaries(resultat_df: pd.DataFrame, resums_list: list[pd.DataFrame]):
         )
 
     return summary_totals, summary_tipus
+
+
+def recalc_filtered_summaries(
+    data: pd.DataFrame, sorteigs: list[str], prev_totals: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Recalculate totals and details from the filtered participant rows."""
+    rows_tot, rows_det = [], []
+    for s in sorteigs:
+        base = s.replace(" ", "_")
+        if base not in data.columns:
+            continue
+        sol = int(data[base].notna().sum())
+        finals = int(data[base].gt(0).sum())
+        prev = 0
+        if "Assignacions_previstes" in prev_totals.columns:
+            _pr = prev_totals.loc[prev_totals["Sorteig"] == s, "Assignacions_previstes"]
+            if not _pr.empty:
+                prev = int(_pr.iloc[0])
+        rows_tot.append(
+            {
+                "Sorteig": s,
+                "Assignacions_previstes": prev,
+                "Assignacions_finals": finals,
+                "Sol_licituds": sol,
+            }
+        )
+        tip_col = f"Tipus_{base}"
+        if tip_col in data.columns:
+            assigned = data.loc[data[base].gt(0)]
+            grp = assigned.groupby(tip_col).size().dropna()
+            for tip, val in grp.items():
+                rows_det.append(
+                    {
+                        "Sorteig": s,
+                        "Tipus": tip,
+                        "Assignacions_finals": int(val),
+                    }
+                )
+    return pd.DataFrame(rows_tot), pd.DataFrame(rows_det)
 
 
 def load_demo():
@@ -300,6 +353,8 @@ def main():
         else:
             return
     df = standardize_columns(st.session_state["resultat"])
+    if "Estranger" in df.columns:
+        df["Estranger"] = df["Estranger"].apply(normalize_estranger)
     resums = [standardize_columns(r) for r in st.session_state.get("resums", [])]
     totals, details = build_summaries(df, resums)
 
@@ -331,34 +386,18 @@ def main():
         mask &= df["Sorteig"].isin(sorteig_sel)
 
     data = df[mask]
-    totals_filt = totals[totals["Sorteig"].isin(sorteig_sel)] if sorteig_sel else totals
-    details_filt = (
-        details[details["Sorteig"].isin(sorteig_sel)] if sorteig_sel else details
-    )
+    sorteigs_all = sorted(totals["Sorteig"].dropna().unique())
+    sel = sorteig_sel if sorteig_sel else sorteigs_all
+    totals_filt, details_filt = recalc_filtered_summaries(data, sel, totals)
 
     st.title("📊 Resultats del sorteig")
 
-    total_apps = len(df)
+    total_apps = len(data)
     if data.empty:
         st.info("No hi ha dades després dels filtres.")
         return
     prev = totals_filt["Assignacions_previstes"].sum()
-    # Recalculate finals from the *filtered participant* rows so percentages
-    # reflect the applied filters rather than overall totals.
-    _s_map = {s: s.replace(" ", "_") for s in totals["Sorteig"].dropna().unique()}
-    _sel = sorteig_sel if sorteig_sel else list(_s_map.keys())
-    _cols = [_s_map[s] for s in _sel if _s_map.get(s) in data.columns]
-    if _cols:
-        finals = (
-            data[_cols]
-            .apply(pd.to_numeric, errors="coerce")
-            .fillna(0)
-            .gt(0)
-            .sum()
-            .sum()
-        )
-    else:
-        finals = 0
+    finals = totals_filt["Assignacions_finals"].sum()
     k1, k2, k3 = st.columns(3)
     k1.metric("Sol·licituds totals", f"{total_apps:,}")
     k2.metric("Assignacions previstes", f"{prev:,}")
