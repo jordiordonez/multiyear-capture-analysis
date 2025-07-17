@@ -6,6 +6,12 @@ from collections import OrderedDict
 from streamlit_option_menu import option_menu  # pip install streamlit-option-menu
 import plotly.express as px
 
+st.set_page_config(
+    page_title="App Sorteig Pla de Caça",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None, "About": None},
+)
+
 # ── CONSTANTS ────────────────────────────────────────────────────────────────
 
 ESPECIE_SORTEIGS = OrderedDict({
@@ -123,7 +129,9 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
     if "Parroquia" in df.columns:
         df["Parroquia"] = df["Parroquia"].apply(normalitza_parroquia)
 
-    df["assigned"], df["ordre"], df["tipus"] = False, np.nan, np.nan
+    df["assigned"] = False
+    df["ordre"] = pd.Series([pd.NA] * len(df), dtype="Int64")
+    df["tipus"] = pd.Series([pd.NA] * len(df), dtype="object")
     assignats_parr = {k: 0 for k in VEDAT_PARRÒQUIES.get(vedat, {})}
 
     captures_pool = [t for t, q in tipus_quant for _ in range(q)]
@@ -200,11 +208,15 @@ def processar_sorteigs(df1, df2, config, especie, seed):
         extra = df1.loc[df1["Modalitat"].notna() & ~df1["ID"].isin(ids_totals), "ID"]
         ids_totals = np.union1d(ids_totals, extra)
     base = df1[df1["ID"].isin(ids_totals)].drop_duplicates("ID")
+
+    cols = ["ID"]
     if especie == "Isard":
-        resultat = base[["ID", "Modalitat", "Colla_ID",
-                         "Prioritat", "anys_sense_captura", "Estranger"]].copy()
-    else:
-        resultat = base[["ID", "Prioritat", "anys_sense_captura", "Estranger"]].copy()
+        cols.extend(["Modalitat", "Colla_ID"])
+    cols.extend(["Prioritat", "anys_sense_captura", "Estranger"])
+    if "Parroquia" in base.columns:
+        cols.append("Parroquia")
+
+    resultat = base[cols].copy()
 
     captures_prev = {id_: 0 for id_ in resultat["ID"]}
     resum_sorteigs = []
