@@ -294,9 +294,23 @@ def processar_sorteigs(df1, df2, config, especie, seed):
             parr = asignats.loc[asignats[f"ordre_{col_base}"].notna(), "Parroquia"]
             parr_counts = parr.value_counts().to_dict()
 
+        assign_prev = int(conf_rows["Quantitat"].sum())
+        tipus_list = []
+        for lst in conf_rows["Tipus"]:
+            if isinstance(lst, list):
+                tipus_list.extend(lst)
+            elif lst:
+                tipus_list.append(str(lst))
+        tipus_str = "+".join(sorted(set(t for t in tipus_list if t)))
+        if sorteig == "IS TCC":
+            tipus_str = ""
+
         resum = pd.DataFrame({
             "Sorteig": [sorteig],
-            "Captures": [total_cap],
+            "Tipus": [tipus_str],
+            "Assignacions_previstes": [assign_prev],
+            "Sol_licituds": [len(subset)],
+            "Assignacions_finals": [total_cap],
             "% Estrangers": [round(100 * estr / max(1, total_cap), 1)],
         })
         for t, v in tipus_counts.items():
