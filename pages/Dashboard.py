@@ -235,7 +235,7 @@ def main():
             parro_sel = st.multiselect('Parròquia', sorted(df['Parroquia'].dropna().unique()))
         pri_max = int(df.get('Prioritat', pd.Series([0])).max())
         pri_sel = st.slider('Prioritat', 0, pri_max, (0, pri_max))
-        sorteig_opts = sorted(df['Sorteig'].dropna().unique())
+        sorteig_opts = sorted(totals['Sorteig'].dropna().unique())
         sorteig_sel = st.multiselect('Sorteig', sorteig_opts, default=sorteig_opts)
         show_only = st.checkbox('Mostrar només seleccionats')
 
@@ -245,7 +245,7 @@ def main():
     if parro_sel:
         mask &= df['Parroquia'].isin(parro_sel)
     mask &= df['Prioritat'].between(pri_sel[0], pri_sel[1])
-    if show_only and sorteig_sel:
+    if show_only and sorteig_sel and 'Sorteig' in df.columns:
         mask &= df['Sorteig'].isin(sorteig_sel)
 
     data = df[mask]
@@ -284,7 +284,8 @@ def main():
     if 'Prioritat' in data.columns:
         dim_options.append('Prioritat')
     dim = st.radio('Desglossament', dim_options, horizontal=True)
-    drill_fig = plot_drill(data[data['Sorteig'].isin(sorteig_sel)], dim)
+    drill_data = data[data['Sorteig'].isin(sorteig_sel)] if 'Sorteig' in data.columns else data
+    drill_fig = plot_drill(drill_data, dim)
     st.plotly_chart(drill_fig, use_container_width=True)
 
     with st.expander('Dades filtrades'):
