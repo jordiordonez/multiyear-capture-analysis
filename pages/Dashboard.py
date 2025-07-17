@@ -4,6 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from streamlit_option_menu import option_menu
 import unicodedata
+import math
 
 COLOR_FORECAST = "#d9d9d9"
 COLOR_APPS_BELOW = "#ff7f0e"
@@ -43,6 +44,34 @@ def normalize_estranger(value: str) -> str:
     }:
         return "Si"
     return "No"
+
+
+def normalize_parroquia(value):
+    """Return canonical parish name or None."""
+    CODI_PARROQUIES = {
+        1: "Canillo",
+        2: "Encamp",
+        3: "Ordino",
+        4: "La Massana",
+        5: "Andorra la Vella",
+        6: "Sant Julià de Lòria",
+        7: "Escaldes-Engordany",
+    }
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return None
+    txt = str(value).strip()
+    if txt.isdigit():
+        return CODI_PARROQUIES.get(int(txt))
+    txt = (
+        txt.lower()
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace("sj", "Sant Julià de Lòria")
+    )
+    for name in CODI_PARROQUIES.values():
+        if name.lower() in txt:
+            return name
+    return None
 
 
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -342,6 +371,8 @@ def main():
     df = standardize_columns(st.session_state["resultat"])
     if "Estranger" in df.columns:
         df["Estranger"] = df["Estranger"].apply(normalize_estranger)
+    if "Parroquia" in df.columns:
+        df["Parroquia"] = df["Parroquia"].apply(normalize_parroquia)
     resums = [standardize_columns(r) for r in st.session_state.get("resums", [])]
     totals, details = build_summaries(df, resums)
 
