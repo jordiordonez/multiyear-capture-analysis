@@ -297,22 +297,44 @@ def processar_sorteigs(df1, df2, config, especie, seed):
                       inplace=True)
         resultat[col_base] = resultat[col_base].astype("Int64")
 
-        total_cap = rezultat_cap = asignats[f"ordre_{col_base}"].notna().sum()
-        estr = asignats[asignats["Estranger"] == "si"]\
-                        [f"ordre_{col_base}"].count()
-        tipus_counts = asignats[f"tipus_{col_base}"].value_counts().to_dict()
+        asign_finals = asignats[f"ordre_{col_base}"].notna().sum()
+        estr = asignats[asignats["Estranger"] == "si"][f"ordre_{col_base}"].count()
+        tipus_counts = asignats.loc[
+            asignats[f"ordre_{col_base}"].notna(), f"tipus_{col_base}"
+        ].value_counts().to_dict()
+
         parr_counts = {}
         if "Parroquia" in asignats.columns:
             parr = asignats.loc[asignats[f"ordre_{col_base}"].notna(), "Parroquia"]
             parr_counts = parr.value_counts().to_dict()
 
-        resum = pd.DataFrame({
-            "Sorteig": [sorteig],
-            "Captures": [total_cap],
-            "% Estrangers": [round(100 * estr / max(1, total_cap), 1)],
-        })
-        for t, v in tipus_counts.items():
-            resum[t] = v
+        previs_counts = {}
+        for _, r in conf_rows.iterrows():
+            tp = _parse_tipus(r["Tipus"])
+            tip_label = "+".join(tp) if tp else "Indeterminat"
+            previs_counts[tip_label] = previs_counts.get(tip_label, 0) + int(r["Quantitat"])
+
+        sol_licituds = len(subset_ids)
+        resum_rows = []
+        for t in set(previs_counts) | set(tipus_counts):
+            resum_rows.append({
+                "Sorteig": sorteig,
+                "Tipus": t,
+                "Assignacions_previstes": previs_counts.get(t, 0),
+                "Sol_licituds": sol_licituds,
+                "Assignacions_finals": tipus_counts.get(t, 0),
+                "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
+            })
+        if not resum_rows:
+            resum_rows.append({
+                "Sorteig": sorteig,
+                "Tipus": "Indeterminat",
+                "Assignacions_previstes": sum(previs_counts.values()),
+                "Sol_licituds": sol_licituds,
+                "Assignacions_finals": asign_finals,
+                "% Estrangers": round(100 * estr / max(1, asign_finals), 1),
+            })
+        resum = pd.DataFrame(resum_rows)
         for p, v in parr_counts.items():
             resum[p] = v
         resum_sorteigs.append(resum)
