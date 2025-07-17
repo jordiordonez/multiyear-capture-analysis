@@ -1,0 +1,4 @@
+[theme]
+base = "light"
+primaryColor   = "#0168ff"  # Streamlit will auto-adapt contrast
+font            = "sans serif"
