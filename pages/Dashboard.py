@@ -268,11 +268,16 @@ def plot_drill(assign_data: pd.DataFrame, dim: str, app_data: pd.DataFrame | Non
         if dim_col in assign_data.columns
         else pd.DataFrame(columns=[dim_col, "Assignacions_finals"])
     )
-    apps_grp = (
-        app_data.groupby(dim_col).size().reset_index(name="Sol_licituds")
-        if dim_col in app_data.columns
-        else pd.DataFrame(columns=[dim_col, "Sol_licituds"])
-    )
+
+    if dim_col in app_data.columns:
+        if "Sol_licituds" in app_data.columns:
+            apps_grp = (
+                app_data.groupby(dim_col)["Sol_licituds"].sum().reset_index()
+            )
+        else:
+            apps_grp = app_data.groupby(dim_col).size().reset_index(name="Sol_licituds")
+    else:
+        apps_grp = pd.DataFrame(columns=[dim_col, "Sol_licituds"])
 
     if assign_grp.empty and apps_grp.empty:
         return go.Figure()
@@ -449,19 +454,25 @@ def main():
 
     if dim == "Tipus":
         drill_data = details_filt
+        app_data = pd.DataFrame()
     else:
         _dim_col = {"Parròquia": "Parroquia"}.get(dim, dim)
         if _dim_col in data.columns and assign_cols:
-            assigned = data.loc[data[assign_cols].gt(0).any(axis=1)]
-            _grp = assigned.groupby(_dim_col, as_index=False).size()
-            _grp = _grp.rename(columns={"size": "Assignacions_finals"})
-            drill_data = _grp
+            assign_count = data[assign_cols].gt(0).sum(axis=1)
+            drill_data = (
+                data.assign(Assignacions_finals=assign_count)
+                .groupby(_dim_col, as_index=False)["Assignacions_finals"]
+                .sum()
+            )
+            app_count = data[assign_cols].notna().sum(axis=1)
+            app_data = (
+                data.assign(Sol_licituds=app_count)
+                .groupby(_dim_col, as_index=False)["Sol_licituds"]
+                .sum()
+            )
         else:
             drill_data = pd.DataFrame(columns=[_dim_col, "Assignacions_finals"])
-
-    app_data = data
-    if assign_cols:
-        app_data = data.loc[data[assign_cols].notna().any(axis=1)]
+            app_data = pd.DataFrame(columns=[_dim_col, "Sol_licituds"])
 
     drill_fig = plot_drill(drill_data, dim, app_data)
     st.plotly_chart(drill_fig, use_container_width=True)
