@@ -124,6 +124,8 @@ def sorteig_individual(df, tipus_quant, ordre_aleatori, vedat, rng):
         df["Parroquia"] = df["Parroquia"].apply(normalitza_parroquia)
 
     df["assigned"], df["ordre"], df["tipus"] = False, np.nan, np.nan
+    # Ensure the 'tipus' column can store strings without dtype warnings
+    df["tipus"] = df["tipus"].astype(object)
     assignats_parr = {k: 0 for k in VEDAT_PARRÒQUIES.get(vedat, {})}
 
     captures_pool = [t for t, q in tipus_quant for _ in range(q)]
