@@ -155,7 +155,7 @@ Transforms the simulated logic into a usable web application for practical manag
 Deployment:
 The application is currently hosted via Streamlit Community Cloud 🔗 [Visit App.](https://multiyear-capture-analysis-hfn76hzqpwmup5xamhgaeq.streamlit.app)
 
-And here is the final version fully adapting 2025 Regulatory Governamental Rules in ANDORRA 🔗 [Visit App.](https://sorteigfauna.streamlit.app) from the github repository [sorteif-fauna](https://github.com/jordiordonez/sorteig-fauna)
+And here is the final version fully adapting 2025 Regulatory Governamental Rules in ANDORRA 🔗 [Visit App.](https://sorteigfauna.streamlit.app) from the github repository [sorteig_fauna](https://github.com/jordiordonez/sorteig_fauna)
 
 
 ## 🧐 Final Reflection
